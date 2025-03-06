@@ -23,7 +23,15 @@ pub fn file_size(file_path: &str) -> Result<u64, &'static str>{
     // 如何获取文件大小
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(file_path);
     match fs::metadata(path){
-        Ok(metadata) => Ok(metadata.len()),
+        Ok(metadata) => {
+            // metadata能处理文件夹，所以要判定一下，不然空输入也会读len
+            if metadata.is_file(){
+                Ok(metadata.len())
+            }
+            else {
+                Err("Not a file")
+            }
+        },
         Err(_) => Err("File not found!")
     }
 }
@@ -62,10 +70,13 @@ mod test_file_size {
     // }
     #[test]
     fn another_test(){
-        match file_size("test1.txt") {
+        let path = env!("CARGO_MANIFEST_DIR");
+        println!("path: {}", path);
+        match file_size("test.txt") {
             Ok(size) => println!("File size is {} bytes", size),
             Err(err) => panic!("Something went wrong! {}", err)
         }
+        let num = file_size("").unwrap();
         
     }
 }
