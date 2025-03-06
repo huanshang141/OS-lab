@@ -1,7 +1,7 @@
 use lab0::{count_down, file_size, read_and_print};
 use std::io;
 fn main() {
-    // count_down(5);
+    count_down(5);
     if let Err(e) = read_and_print(""){
         println!("Error: {:?}", e);
     }
