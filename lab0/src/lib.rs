@@ -50,3 +50,59 @@ fn test_humanized_size() {
         format!("Size :  {:.4} {}", size, unit)
     );
 }
+//  use llm
+pub enum Shape {
+    //rectangle(f64,f64)
+    //元组结构体与命名结构体
+    Rectangle { width: f64, height: f64 },
+    Circle { radius: f64 },
+}
+
+impl Shape {
+    pub fn area(&self) -> f64 {
+        match self {
+            Shape::Rectangle { width, height } => width * height,
+            Shape::Circle { radius } => std::f64::consts::PI * radius * radius,
+        }
+    }
+}
+#[derive(PartialEq, Eq, Debug)]
+pub struct UniqueId(pub u16);
+
+impl UniqueId {
+    pub fn new() -> Self {
+        // Static variable to keep track of the next ID
+        static mut NEXT_ID: u16 = 0;
+
+        // This is unsafe because we're modifying static mutable data
+        // which could cause data races if called from multiple threads
+        let id = unsafe {
+            let id = NEXT_ID;
+            NEXT_ID = NEXT_ID.wrapping_add(1);
+            id
+        };
+
+        UniqueId(id)
+    }
+
+    pub fn get(&self) -> u16 {
+        self.0
+    }
+}
+#[test]
+fn test_area() {
+    let rectangle = Shape::Rectangle {
+        width: 10.0,
+        height: 20.0,
+    };
+    let circle = Shape::Circle { radius: 10.0 };
+
+    assert_eq!(rectangle.area(), 200.0);
+    assert_eq!(circle.area(), 314.1592653589793);
+}
+#[test]
+fn test_unique_id() {
+    let id1 = UniqueId::new();
+    let id2 = UniqueId::new();
+    assert_ne!(id1, id2);
+}
