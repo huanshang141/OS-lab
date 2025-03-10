@@ -106,3 +106,42 @@ fn test_unique_id() {
     let id2 = UniqueId::new();
     assert_ne!(id1, id2);
 }
+
+#[test]
+fn test_unique_id_thread_unsafe() {
+    use std::collections::HashSet;
+    use std::sync::{Arc, Mutex};
+    use std::thread;
+
+    // 创建一个线程安全的集合来存储所有生成的ID
+    let ids = Arc::new(Mutex::new(HashSet::new()));
+
+    // 创建多个线程，每个线程生成多个UniqueId
+    let mut handles = vec![];
+    for _ in 0..10 {
+        let ids_clone = Arc::clone(&ids);
+        let handle = thread::spawn(move || {
+            for _ in 0..100 {
+                let id = UniqueId::new();
+                let mut ids = ids_clone.lock().unwrap();
+                ids.insert(id.get());
+            }
+        });
+        handles.push(handle);
+    }
+
+    // 等待所有线程完成
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    // 检查生成的ID数量
+    let ids = ids.lock().unwrap();
+    // 如果没有重复的ID，应该有 10 * 100 = 1000 个ID
+    // 如果有重复的ID，数量会少于1000
+    println!("生成了 {} 个唯一ID，期望值为1000", ids.len());
+    assert!(
+        ids.len() < 1000,
+        "预期由于线程安全问题会出现重复ID，但未发现重复。此测试可能不稳定。"
+    );
+}
