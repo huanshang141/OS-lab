@@ -23,11 +23,45 @@ fn efi_main() -> Status {
     info!("Running UEFI bootloader...");
 
     // 1. Load config
-    let config = load_file(config_path);
+    let config = {
+        // 1. 打开配置文件
+        let mut file = fs::open_file(CONFIG_PATH);
+
+        // 2. 加载文件内容到内存
+        let buffer = fs::load_file(&mut file);
+
+        // 3. 解析配置文件内容
+        config::Config::parse(&buffer)
+    };
+
     info!("Config: {:#x?}", config);
 
     // 2. Load ELF files
-    let elf = load_file(elf_path);
+    let elf = {
+        // 1. 从配置中获取内核路径
+        let kernel_path = config.kernel_path;
+        info!("Loading kernel from: {}", kernel_path);
+
+        // 2. 打开内核文件
+        let mut file = fs::open_file(kernel_path);
+
+        // 3. 加载内核文件到内存
+        let buffer = fs::load_file(&mut file);
+
+        // 4. 解析ELF文件
+        match xmas_elf::ElfFile::new(buffer) {
+            Ok(elf_file) => {
+                info!(
+                    "Kernel ELF loaded, entry point: {:#x}",
+                    elf_file.header.pt2.entry_point()
+                );
+                elf_file
+            }
+            Err(e) => {
+                panic!("Failed to parse ELF file: {:?}", e);
+            }
+        }
+    };
 
     unsafe {
         set_entry(elf.header.pt2.entry_point() as usize);
