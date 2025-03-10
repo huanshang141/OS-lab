@@ -23,7 +23,7 @@ parser.add_argument('--dry-run', action='store_true', help='Enable dry run')
 parser.add_argument('--bios', type=str,
                     default=os.path.join('assets', 'OVMF.fd'), help='Set BIOS path')
 parser.add_argument('--boot', type=str, default='esp', help='Set boot path')
-parser.add_argument('--debug-listen', type=str, default='0.0.0.0:1234',
+parser.add_argument('--debug-listen', type=str, default='0.0.0.0:12345',
                     help='Set listen address for gdbserver')
 
 parser.add_argument('task', type=str, choices=[
