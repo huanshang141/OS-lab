@@ -8,8 +8,10 @@ extern crate alloc;
 
 use alloc::boxed::Box;
 use alloc::vec;
-use uefi::{Status, entry, fs::Path};
+use uefi::mem::memory_map::MemoryMap;
+use uefi::{Status, entry};
 use x86_64::registers::control::*;
+use x86_64::structures::paging::FrameAllocator;
 use ysos_boot::*;
 mod config;
 
@@ -23,43 +25,30 @@ fn efi_main() -> Status {
     info!("Running UEFI bootloader...");
 
     // 1. Load config
-    let config = {
-        // 1. 打开配置文件
-        let mut file = fs::open_file(CONFIG_PATH);
-
-        // 2. 加载文件内容到内存
-        let buffer = fs::load_file(&mut file);
-
-        // 3. 解析配置文件内容
-        config::Config::parse(&buffer)
-    };
-
+    let mut file = fs::open_file(CONFIG_PATH);
+    let buffer = fs::load_file(&mut file);
+    let config = config::Config::parse(&buffer);
     info!("Config: {:#x?}", config);
 
     // 2. Load ELF files
-    let elf = {
-        // 1. 从配置中获取内核路径
-        let kernel_path = config.kernel_path;
-        info!("Loading kernel from: {}", kernel_path);
 
-        // 2. 打开内核文件
-        let mut file = fs::open_file(kernel_path);
+    // 从配置中获取内核路径
+    let kernel_path = config.kernel_path;
 
-        // 3. 加载内核文件到内存
-        let buffer = fs::load_file(&mut file);
+    info!("Loading kernel from: {}", kernel_path);
+    let mut file = fs::open_file(kernel_path);
 
-        // 4. 解析ELF文件
-        match xmas_elf::ElfFile::new(buffer) {
-            Ok(elf_file) => {
-                info!(
-                    "Kernel ELF loaded, entry point: {:#x}",
-                    elf_file.header.pt2.entry_point()
-                );
-                elf_file
-            }
-            Err(e) => {
-                panic!("Failed to parse ELF file: {:?}", e);
-            }
+    let buffer = fs::load_file(&mut file);
+    let elf = match xmas_elf::ElfFile::new(buffer) {
+        Ok(elf_file) => {
+            info!(
+                "Kernel ELF loaded, entry point: {:#x}",
+                elf_file.header.pt2.entry_point()
+            );
+            elf_file
+        }
+        Err(e) => {
+            panic!("Failed to parse ELF file: {:?}", e);
         }
     };
 
@@ -81,14 +70,55 @@ fn efi_main() -> Status {
     let mut page_table = current_page_table();
 
     // FIXME: root page table is readonly, disable write protect (Cr0)
+    unsafe {
+        Cr0::update(|f| f.remove(Cr0Flags::WRITE_PROTECT));
+        info!("Write protect disabled");
+    }
 
     // FIXME: map physical memory to specific virtual address offset
+    // let FrameAllocator = UEFIFrameAllocator();
+
+    elf::map_physical_memory(
+        config.physical_memory_offset, // 使用配置文件中的偏移量
+        max_phys_addr,                 // 使用之前计算的物理内存最大地址
+        &mut page_table,               // 页表
+        &mut UEFIFrameAllocator {},    // 帧分配器
+    );
+    info!(
+        "Physical memory mapped to offset {:#x}",
+        config.physical_memory_offset
+    );
 
     // FIXME: load and map the kernel elf file
 
+    elf::load_elf(
+        &elf,                          // ELF文件
+        config.physical_memory_offset, // 物理内存偏移量
+        &mut page_table,               // 页表
+        &mut UEFIFrameAllocator {},    // 帧分配器
+    )
+    .expect("Failed to load kernel ELF");
+    info!("Kernel ELF loaded and mapped");
+
     // FIXME: map kernel stack
 
+    elf::map_range(
+        config.kernel_stack_address, // 从配置文件获取栈地址
+        config.kernel_stack_size,    // 从配置文件获取栈大小（页数）
+        &mut page_table,             // 页表
+        &mut UEFIFrameAllocator {},  // 帧分配器
+    )
+    .expect("Failed to map kernel stack");
+    info!(
+        "Kernel stack mapped at {:#x} with size {} pages",
+        config.kernel_stack_address, config.kernel_stack_size
+    );
+
     // FIXME: recover write protect (Cr0)
+    unsafe {
+        Cr0::update(|f| f.insert(Cr0Flags::WRITE_PROTECT));
+        info!("Write protect restored");
+    }
 
     free_elf(elf);
 
