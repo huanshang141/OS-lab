@@ -31,7 +31,6 @@ fn efi_main() -> Status {
 
     // 2. Load ELF files
 
-    // 从配置中获取内核路径
     let kernel_path = config.kernel_path;
 
     info!("Loading kernel from: {}", kernel_path);
@@ -78,29 +77,27 @@ fn efi_main() -> Status {
     // let FrameAllocator = UEFIFrameAllocator();
 
     elf::map_physical_memory(
-        config.physical_memory_offset, // 使用配置文件中的偏移量
-        max_phys_addr,                 // 使用之前计算的物理内存最大地址
-        &mut page_table,               // 页表
-        &mut UEFIFrameAllocator {},    // 帧分配器
+        config.physical_memory_offset,
+        max_phys_addr,
+        &mut page_table,
+        &mut UEFIFrameAllocator {},
     );
     info!(
         "Physical memory mapped to offset {:#x}",
         config.physical_memory_offset
     );
 
-    // FIXME: load and map the kernel elf file
-
     elf::load_elf(
-        &elf,                          // ELF文件
-        config.physical_memory_offset, // 物理内存偏移量
-        &mut page_table,               // 页表
-        &mut UEFIFrameAllocator {},    // 帧分配器
+        &elf,
+        config.physical_memory_offset,
+        &mut page_table,
+        &mut UEFIFrameAllocator {},
     )
     .expect("Failed to load kernel ELF");
     info!("Kernel ELF loaded and mapped");
 
     // FIXME: map kernel stack
-
+    // llm assist
     elf::map_range(
         config.kernel_stack_address, // 从配置文件获取栈地址
         config.kernel_stack_size,    // 从配置文件获取栈大小（页数）

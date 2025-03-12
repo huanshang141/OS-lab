@@ -19,7 +19,7 @@ impl<const BASE_ADDR: u16> SerialPort<BASE_ADDR> {
             fifo_control: Port::new(BASE_ADDR + 2),
             line_control: Port::new(BASE_ADDR + 3),
             modem_control: Port::new(BASE_ADDR + 4),
-            line_status: Port::new(BASE_ADDR + 5), // 初始化线路状态寄存器
+            line_status: Port::new(BASE_ADDR + 5),
         }
     }
 

@@ -12,7 +12,10 @@ boot::entry_point!(kernel_main);
 pub fn kernel_main(boot_info: &'static boot::BootInfo) -> ! {
     ysos::init(boot_info);
     loop {
-        info!("Hello World frosm YatSenOS v2!");
+        info!("Hello World from YatSenOS v2!");
+        warn!("This is a warning message.");
+        error!("This is an error message.");
+        panic!("This is a panic message.");
 
         for _ in 0..0x10000000 {
             unsafe {

@@ -1,5 +1,5 @@
-use crate::drivers::serial::get_serial;
 use crate::drivers::serial::SERIAL; //not found in this scope
+use crate::drivers::serial::get_serial;
 use core::fmt::*;
 use x86_64::instructions::interrupts;
 
@@ -70,6 +70,29 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     // force unlock serial for panic output
     unsafe { SERIAL.get().unwrap().force_unlock() };
 
-    error!("ERROR: panic!\n\n{:#?}", info);
-    loop {}
+    //llm assist
+    println!("\n\r==================================================");
+    println!("!!! KERNEL PANIC !!!");
+    println!("==================================================");
+    println!("An unrecoverable error has occurred in the kernel");
+    println!("Error details: {}", info);
+
+    // Print location information if available
+    if let Some(location) = info.location() {
+        println!(
+            "Location: {}:{}:{}",
+            location.file(),
+            location.line(),
+            location.column()
+        );
+    }
+
+    println!("--------------------------------------------------");
+    println!("CPU halted. System needs to be restarted manually.");
+    println!("==================================================\n\r");
+
+    // Enter infinite loop
+    loop {
+        x86_64::instructions::hlt();
+    }
 }

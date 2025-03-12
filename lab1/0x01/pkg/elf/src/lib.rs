@@ -129,7 +129,7 @@ fn load_segment(
     let mut page_table_flags = PageTableFlags::PRESENT;
 
     // FIXME: handle page table flags with segment flags
-
+    // llm assist
     // 使用segment.flags()来设置页表标志
     if segment.flags().is_write() {
         page_table_flags |= PageTableFlags::WRITABLE;
@@ -137,7 +137,6 @@ fn load_segment(
     if !segment.flags().is_execute() {
         page_table_flags |= PageTableFlags::NO_EXECUTE;
     }
-    // 默认可读吗
 
     // unimplemented!("Handle page table flags with segment flags!");
 
