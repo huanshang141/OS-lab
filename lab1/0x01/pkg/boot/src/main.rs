@@ -11,7 +11,6 @@ use alloc::vec;
 use uefi::mem::memory_map::MemoryMap;
 use uefi::{Status, entry};
 use x86_64::registers::control::*;
-use x86_64::structures::paging::FrameAllocator;
 use ysos_boot::*;
 mod config;
 
