@@ -8,7 +8,7 @@ pub struct SerialPort<const BASE_ADDR: u16> {
     fifo_control: Port<u8>,
     line_control: Port<u8>,
     modem_control: Port<u8>,
-    line_status: Port<u8>, // 添加线路状态寄存器
+    line_status: Port<u8>,
 }
 
 impl<const BASE_ADDR: u16> SerialPort<BASE_ADDR> {
@@ -27,7 +27,6 @@ impl<const BASE_ADDR: u16> SerialPort<BASE_ADDR> {
     pub fn init(&mut self) {
         // FIXME: Initialize the serial port
         unsafe {
-            //更改下面的write参数为u8类型
             self.int_enable.write(0x00_u8); // Disable all interrupts
             self.line_control.write(0x80_u8); // Enable DLAB (set baud rate divisor)
             self.data.write(0x03_u8); // Set divisor to 3 (lo byte) 38400 baud
