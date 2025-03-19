@@ -1,4 +1,5 @@
 use super::LocalApic;
+use crate::interrupt::consts::{Interrupts, Irq};
 use bit_field::BitField;
 use core::fmt::{Debug, Error, Formatter};
 use core::ptr::{read_volatile, write_volatile};
@@ -34,7 +35,8 @@ impl LocalApic for XApic {
         // FIXME: Check CPUID to see if xAPIC is supported.
         CpuId::new()
             .get_feature_info()
-            .map(|f| f.has_apic().unwrap_or(false))
+            .map(|f| f.has_apic())
+            .unwrap_or(false)
     }
 
     /// Initialize the xAPIC for the current CPU.
@@ -42,73 +44,85 @@ impl LocalApic for XApic {
         unsafe {
             // FIXME: Enable local APIC; set spurious interrupt vector.
             bitflags! {
-                struct spiv: u32 {
+                struct Spiv: u32 {
                     const ENABLE = 1 << 8;// set EN bit
-                    const VECTOR = Interrupt::Spurious as u32 + Irq::Spurious as u32;
+                    const VECTOR = Interrupts::IrqBase as u32 + Irq::Spurious as u32;
                 }
             }
-            let spiv = spiv::ENABLE | spiv::VECTOR;
-            self.write(0xF0, spiv.bits());
+            let spiv_value = Spiv::ENABLE | Spiv::VECTOR;
+            self.write(0xF0, spiv_value.bits());
 
             // FIXME: The timer repeatedly counts down at bus frequency
-            struct lvtt: u32 {
-                const PERIODIC = 1 << 17;
-                const MASKED = 1 << 16;
-                const VECTOR = Interrupt::IsrBase as u32 + Irq::Timer as u32;
+            bitflags! {
+                struct Lvtt: u32 {
+                    const PERIODIC = 1 << 17;
+                    const MASKED = 1 << 16;
+                    const VECTOR = Interrupts::IrqBase as u32 + Irq::Timer as u32;
+                }
             }
-            let lvtt = lvtt::PERIODIC | lvtt::VECTOR & !lvtt::MASKED;
-            self.write(0x320, lvtt.bits());
+            let lvtt_value = Lvtt::PERIODIC | Lvtt::VECTOR & !Lvtt::MASKED;
+            self.write(0x320, lvtt_value.bits());
 
-            struct tdcr: u32 {
-                const DIVIDE_1 = 0b1011;
+            bitflags! {
+                struct Tdcr: u32 {
+                    const DIVIDE_1 = 0b1011;
+                }
             }
-            self.write(0x3E0, tdcr::DIVIDE_1.bits());
+            self.write(0x3E0, Tdcr::DIVIDE_1.bits());
 
-            struct ticr: u32 {
-                const INIT = 0x2000;
+            bitflags! {
+                struct Ticr: u32 {
+                    const INIT = 0x2000;
+                }
             }
-            self.write(0x380, ticr::INIT.bits());
+            self.write(0x380, Ticr::INIT.bits());
 
             // FIXME: Disable logical interrupt lines (LINT0, LINT1)
-            struct lint: u32 {
-                const MASKED = 1 << 16;
+            bitflags! {
+                struct Lint: u32 {
+                    const MASKED = 1 << 16;
+                }
             }
-            self.write(0x350, lint::MASKED.bits()); //lint0
-            self.write(0x360, lint::MASKED.bits());//lint1
+            self.write(0x350, Lint::MASKED.bits()); //lint0
+            self.write(0x360, Lint::MASKED.bits()); //lint1
 
             // FIXME: Disable performance counter overflow interrupts (PCINT)
-            struct pcint: u32 {
+            bitflags! {
+            struct Pcint: u32 {
                 const MASKED = 1 << 16;
             }
-            self.write(0x340, pcint::MASKED.bits());
+            }
+            self.write(0x340, Pcint::MASKED.bits());
 
             // FIXME: Map error interrupt to IRQ_ERROR.
-            struct error: u32 {
-                const VECTOR = Interrupt::IsrBase as u32 + Irq::Error as u32;
+            bitflags! {
+                struct Error: u32 {
+                    const VECTOR = Interrupts::IrqBase as u32 + Irq::Error as u32;
+                }
             }
-            self.write(0x370, error::VECTOR.bits());
+            self.write(0x370, Error::VECTOR.bits());
 
             // FIXME: Clear error status register (requires back-to-back writes).
             self.write(0x280, 0);
             self.write(0x280, 0);
 
-
             // FIXME: Ack any outstanding interrupts.
             self.eoi();
 
             // FIXME: Send an Init Level De-Assert to synchronise arbitration ID's.
-            self.write(0x310,0);// set ICR 0x310
-            struct icr: u64 {
-                const BCAST: u32 = 1 << 19;
-                const INIT: u32 = 5 << 8;
-                const TMLV: u32 = 1 << 15;
+            self.write(0x310, 0); // set ICR 0x310
+            bitflags! {
+                struct Icr: u64 {
+                    const BCAST = 1 << 19;
+                    const INIT = 5 << 8;
+                    const TMLV = 1 << 15;
+                }
             }
-            let icr = icr::BCAST | icr::INIT | icr::TMLV;
-            self.set_icr(icr as u64);
+            let icr_value = Icr::BCAST | Icr::INIT | Icr::TMLV;
+            self.set_icr(icr_value.bits());
 
             // FIXME: Enable interrupts on the APIC (but not on the processor).
             self.write(0x1B0, 0);
-
         }
 
         // NOTE: Try to use bitflags! macro to set the flags.

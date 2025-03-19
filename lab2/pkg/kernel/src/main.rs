@@ -15,7 +15,7 @@ pub fn kernel_main(boot_info: &'static boot::BootInfo) -> ! {
         info!("Hello World from YatSenOS v2!");
         warn!("This is a warning message.");
         error!("This is an error message.");
-        panic!("This is a panic message.");
+        // panic!("This is a panic message.");
 
         for _ in 0..0x10000000 {
             unsafe {

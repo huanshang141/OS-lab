@@ -1,4 +1,5 @@
 use crate::memory::*;
+use x86_64::VirtAddr;
 use x86_64::registers::control::Cr2;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 

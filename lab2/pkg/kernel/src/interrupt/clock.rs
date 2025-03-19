@@ -1,6 +1,6 @@
 use super::consts::*;
 use core::sync::atomic::{AtomicU64, Ordering};
-
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     idt[Interrupts::IrqBase as u8 + Irq::Timer as u8].set_handler_fn(clock_handler);
 }
