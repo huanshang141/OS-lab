@@ -13,3 +13,10 @@ pub fn init() {
 }
 
 guard_access_fn!(pub get_serial(SERIAL: SerialPort<SERIAL_IO_PORT>));
+
+pub fn backspace() {
+    let mut serial = get_serial_for_sure();
+    serial.send(0x08);
+    serial.send(0x20);
+    serial.send(0x08);
+}

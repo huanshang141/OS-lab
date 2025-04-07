@@ -42,3 +42,12 @@ pub extern "x86-interrupt" fn page_fault_handler(
         stack_frame
     );
 }
+pub extern "x86-interrupt" fn general_protection_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: u64,
+) {
+    panic!(
+        "EXCEPTION: GENERAL PROTECTION FAULT, ERROR_CODE: 0x{:016x}\n\n{:#?}",
+        error_code, stack_frame
+    );
+}

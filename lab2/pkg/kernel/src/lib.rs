@@ -31,7 +31,7 @@ pub mod memory;
 pub use alloc::format;
 
 use boot::BootInfo;
-use uefi::{runtime::ResetType, Status};
+use uefi::{Status, runtime::ResetType};
 
 pub fn init(boot_info: &'static BootInfo) {
     unsafe {
@@ -51,9 +51,6 @@ pub fn init(boot_info: &'static BootInfo) {
     info!("Interrupts Enabled.");
 
     info!("YatSenOS initialized.");
-
-    x86_64::instructions::interrupts::enable();
-    info!("Interrupts Enabled.");
 }
 
 pub fn shutdown() -> ! {
