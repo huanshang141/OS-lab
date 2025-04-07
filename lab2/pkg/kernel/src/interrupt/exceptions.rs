@@ -12,6 +12,10 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
         .set_handler_fn(page_fault_handler)
         .set_stack_index(gdt::PAGE_FAULT_IST_INDEX);
 
+    // 注册通用保护错误处理程序
+    idt.general_protection_fault
+        .set_handler_fn(general_protection_handler);
+
     // TODO: you should handle more exceptions here
     // especially general protection fault (GPF)
     // see: https://wiki.osdev.org/Exceptions
