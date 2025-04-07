@@ -66,9 +66,16 @@ impl LocalApic for XApic {
             bitflags! {
                 struct Tdcr: u32 {
                     const DIVIDE_1 = 0b1011;
+                    const DIVIDE_2 = 0b0000;
+                    const DIVIDE_4 = 0b0001;
+                    const DIVIDE_8 = 0b0010;
+                    const DIVIDE_16 = 0b0011;
+                    const DIVIDE_32 = 0b1000;
+                    const DIVIDE_64 = 0b1001;
+                    const DIVIDE_128 = 0b1010;
                 }
             }
-            self.write(0x3E0, Tdcr::DIVIDE_1.bits());
+            self.write(0x3E0, Tdcr::DIVIDE_64.bits());
 
             bitflags! {
                 struct Ticr: u32 {

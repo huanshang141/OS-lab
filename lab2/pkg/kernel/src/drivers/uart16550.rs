@@ -40,6 +40,7 @@ impl<const BASE_ADDR: u16> SerialPort<BASE_ADDR> {
                 panic!("Serial port initialization failed.");
             }
             self.modem_control.write(0x0F_u8);
+            self.int_enable.write(0x01_u8); // Enable interrupts
         }
     }
 
