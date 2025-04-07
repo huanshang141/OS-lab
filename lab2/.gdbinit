@@ -7,3 +7,4 @@ tmux-setup
 break pkg/kernel/src/interrupt/exceptions.rs:32
 break pkg/kernel/src/interrupt/exceptions.rs:42
 break pkg/kernel/src/interrupt/exceptions.rs:54
+break divide_error_handler
