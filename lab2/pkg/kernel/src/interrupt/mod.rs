@@ -16,7 +16,7 @@ lazy_static! {
         unsafe {
             exceptions::register_idt(&mut idt);
             clock::register_idt(&mut idt);
-            serial::register_idt(&mut idt);
+            //serial::register_idt(&mut idt);
         }
         idt
     };
