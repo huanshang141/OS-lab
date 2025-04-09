@@ -13,7 +13,6 @@ pub extern "x86-interrupt" fn clock_handler(_sf: InterruptStackFrame) {
         super::ack();
     });
 }
-
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[inline]
