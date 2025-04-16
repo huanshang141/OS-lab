@@ -6,14 +6,14 @@ mod pid;
 mod process;
 mod processor;
 
+use crate::memory::PAGE_SIZE;
 use manager::*;
 use process::*;
-use crate::memory::PAGE_SIZE;
 
 use alloc::string::String;
 pub use context::ProcessContext;
-pub use paging::PageTableContext;
 pub use data::ProcessData;
+pub use paging::PageTableContext;
 pub use pid::ProcessId;
 
 use x86_64::structures::idt::PageFaultErrorCode;
@@ -35,7 +35,15 @@ pub fn init() {
     trace!("Init kernel vm: {:#?}", proc_vm);
 
     // kernel process
-    let kproc = { /* FIXME: create kernel process */ };
+    let kproc = {
+        // 创建内核进程
+        Process::new(
+            String::from("kernel"),
+            None,
+            Some(proc_vm),
+            Some(ProcessData::default()),
+        )
+    };
     manager::init(kproc);
 
     info!("Process Manager Initialized.");

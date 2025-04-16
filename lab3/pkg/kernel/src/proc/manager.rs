@@ -10,10 +10,8 @@ use spin::{Mutex, RwLock};
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
 
 pub fn init(init: Arc<Process>) {
-
-    // FIXME: set init process as Running
-
-    // FIXME: set processor's current pid to init's pid
+    init.write().resume();
+    processor::set_pid(init.pid());
 
     PROCESS_MANAGER.call_once(|| ProcessManager::new(init));
 }

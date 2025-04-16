@@ -1,7 +1,7 @@
 use crate::memory::*;
-use x86_64::VirtAddr;
 use x86_64::registers::control::Cr2;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
+use x86_64::VirtAddr;
 
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     idt.divide_error.set_handler_fn(divide_error_handler);
@@ -12,7 +12,6 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
         .set_handler_fn(page_fault_handler)
         .set_stack_index(gdt::PAGE_FAULT_IST_INDEX);
 
-    // 注册更多异常处理程序
     idt.general_protection_fault
         .set_handler_fn(general_protection_handler);
     idt.invalid_opcode.set_handler_fn(invalid_opcode_handler);
