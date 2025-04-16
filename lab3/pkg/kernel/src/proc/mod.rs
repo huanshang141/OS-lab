@@ -1,10 +1,11 @@
-mod context;
+pub mod context;
 mod data;
-mod manager;
+pub mod manager;
 mod paging;
 mod pid;
 mod process;
 mod processor;
+mod vm;
 
 use crate::memory::PAGE_SIZE;
 use manager::*;
@@ -16,8 +17,9 @@ pub use data::ProcessData;
 pub use paging::PageTableContext;
 pub use pid::ProcessId;
 
-use x86_64::structures::idt::PageFaultErrorCode;
+use vm::ProcessVm;
 use x86_64::VirtAddr;
+use x86_64::structures::idt::PageFaultErrorCode;
 pub const KERNEL_PID: ProcessId = ProcessId(1);
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -53,11 +55,11 @@ pub fn switch(context: &mut ProcessContext) {
         let process_manager = get_process_manager();
         process_manager.save_current(context);
         let current = process_manager.current();
+        let pid = current.pid();
         {
             let mut current = current.write();
             if current.status() == ProgramStatus::Running {
                 current.pause();
-                let pid = current.pid();
                 drop(current);
                 process_manager.push_ready(pid);
             }
@@ -82,7 +84,7 @@ pub fn print_process_list() {
 
 pub fn env(key: &str) -> Option<String> {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        // FIXME: get current process's environment variable
+        get_process_manager().current().read().env(key)
     })
 }
 

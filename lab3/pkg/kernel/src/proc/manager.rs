@@ -1,10 +1,10 @@
 use super::*;
 use crate::memory::{
-    self,
+    self, PAGE_SIZE,
     allocator::{ALLOCATOR, HEAP_SIZE},
-    get_frame_alloc_for_sure, PAGE_SIZE,
+    get_frame_alloc_for_sure,
 };
-use alloc::{collections::*, format};
+use alloc::{collections::*, format, sync::Arc};
 use spin::{Mutex, RwLock};
 
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
@@ -164,5 +164,8 @@ impl ProcessManager {
         output += &processor::print_processors();
 
         print!("{}", output);
+    }
+    pub fn get_exit_code(&self, pid: ProcessId) -> Option<isize> {
+        self.get_proc(&pid).and_then(|proc| proc.read().exit_code())
     }
 }

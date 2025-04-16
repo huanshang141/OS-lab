@@ -1,6 +1,6 @@
 use super::*;
 use crate::memory::*;
-use alloc::sync::Weak;
+use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::*;
 use x86_64::structures::paging::mapper::MapToError;
@@ -156,11 +156,12 @@ impl ProcessInner {
     }
 
     pub fn kill(&mut self, ret: isize) {
-        // FIXME: set exit code
+        self.exit_code = Some(ret);
 
-        // FIXME: set status to dead
+        self.status = ProgramStatus::Dead;
 
-        // FIXME: take and drop unused resources
+        self.proc_data = None;
+        self.proc_vm = None;
     }
 }
 
@@ -189,7 +190,6 @@ impl core::ops::DerefMut for ProcessInner {
             .expect("Process data empty. The process may be killed.")
     }
 }
-
 
 impl core::fmt::Debug for Process {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {

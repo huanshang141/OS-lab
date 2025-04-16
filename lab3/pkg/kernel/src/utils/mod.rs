@@ -3,13 +3,14 @@ mod macros;
 #[macro_use]
 mod regs;
 
-pub mod clock;
 pub mod func;
 pub mod logger;
 
 pub use macros::*;
 pub use regs::*;
 
+use crate::proc::get_process_manager;
+use crate::proc::manager::get_process_manager;
 use crate::proc::*;
 
 pub const fn get_ascii_header() -> &'static str {
@@ -30,11 +31,7 @@ pub fn new_test_thread(id: &str) -> ProcessId {
     let proc_data = ProcessData::new();
     proc_data.set_env("id", id);
 
-    spawn_kernel_thread(
-        utils::func::test,
-        format!("#{}_test", id),
-        Some(proc_data),
-    )
+    spawn_kernel_thread(utils::func::test, format!("#{}_test", id), Some(proc_data))
 }
 
 pub fn new_stack_test_thread() {
@@ -50,11 +47,12 @@ pub fn new_stack_test_thread() {
 
 fn wait(pid: ProcessId) {
     loop {
-        // FIXME: try to get the status of the process
-
-        // HINT: it's better to use the exit code
-
-        if /* FIXME: is the process exited? */ {
+        let exit_code = {
+            x86_64::instructions::interrupts::without_interrupts(|| {
+                get_process_manager().get_exit_code(pid)
+            })
+        };
+        if exit_code.is_none() {
             x86_64::instructions::hlt();
         } else {
             break;
