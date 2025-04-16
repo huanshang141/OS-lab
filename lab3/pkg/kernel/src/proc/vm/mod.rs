@@ -1,7 +1,7 @@
 use alloc::format;
 use x86_64::{
-    structures::paging::{page::*, *},
     VirtAddr,
+    structures::paging::{page::*, *},
 };
 
 use crate::{humanized_size, memory::*};
@@ -38,8 +38,39 @@ impl ProcessVm {
     }
 
     pub fn init_proc_stack(&mut self, pid: ProcessId) -> VirtAddr {
-        // FIXME: calculate the stack for pid
-        // FIXME: calculate the stack for pid
+        // 计算基于PID的栈顶地址
+        // 栈顶位置 = STACK_MAX - (pid-1) * STACK_MAX_SIZE - 8
+        use self::stack::{STACK_DEF_PAGE, STACK_MAX, STACK_MAX_SIZE};
+
+        let stack_top = STACK_MAX - ((pid.0 as u64 - 1) * STACK_MAX_SIZE) - 8;
+        let stack_bot = stack_top - STACK_DEF_PAGE * crate::memory::PAGE_SIZE + 1;
+
+        let stack_top_addr = VirtAddr::new(stack_top);
+
+        // 获取页表映射器和帧分配器
+        let mapper = &mut self.page_table.mapper();
+        let frame_allocator = &mut *get_frame_alloc_for_sure();
+
+        // 使用elf::map_range分配和映射栈空间
+        let page_range = match elf::map_range(stack_bot, STACK_DEF_PAGE, mapper, frame_allocator) {
+            Ok(range) => range,
+            Err(e) => {
+                error!("Failed to map stack: {:?}", e);
+                panic!("Failed to allocate stack for process {}", pid.0);
+            }
+        };
+
+        // 更新进程的栈信息
+        self.stack = Stack::new(
+            Page::containing_address(VirtAddr::new(stack_top)),
+            STACK_DEF_PAGE,
+        );
+
+        trace!(
+            "Process stack allocated at {:#x}-{:#x}",
+            stack_bot, stack_top
+        );
+
         stack_top_addr
     }
 

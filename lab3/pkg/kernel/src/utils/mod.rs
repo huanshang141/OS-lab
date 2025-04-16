@@ -9,9 +9,9 @@ pub mod logger;
 pub use macros::*;
 pub use regs::*;
 
-use crate::proc::get_process_manager;
 use crate::proc::manager::get_process_manager;
 use crate::proc::*;
+use alloc::format;
 
 pub const fn get_ascii_header() -> &'static str {
     concat!(
@@ -28,18 +28,14 @@ __  __      __  _____            ____  _____
 }
 
 pub fn new_test_thread(id: &str) -> ProcessId {
-    let proc_data = ProcessData::new();
+    let mut proc_data = ProcessData::new();
     proc_data.set_env("id", id);
 
-    spawn_kernel_thread(utils::func::test, format!("#{}_test", id), Some(proc_data))
+    spawn_kernel_thread(func::test, format!("#{}_test", id), Some(proc_data))
 }
 
 pub fn new_stack_test_thread() {
-    let pid = spawn_kernel_thread(
-        utils::func::stack_test,
-        alloc::string::String::from("stack"),
-        None,
-    );
+    let pid = spawn_kernel_thread(func::stack_test, alloc::string::String::from("stack"), None);
 
     // wait for progress exit
     wait(pid);

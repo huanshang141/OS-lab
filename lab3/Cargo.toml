@@ -33,7 +33,7 @@ arrayvec = { version = "0.7", default-features = false }
 uefi = { version = "0.34", default-features = false }
 lazy_static = { version = "1.4", features = ["spin_no_std"] }
 crossbeam-queue = { version = "0.3", default-features = false, features = ["alloc"] }
-volatile = "0.4.6"
+volatile = "0.6.1"
 # Local dependencies
 
 elf = { path = "pkg/elf", package = "ysos_elf" }

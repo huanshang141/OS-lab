@@ -106,16 +106,26 @@ impl ProcessManager {
         let proc_vm = Some(ProcessVm::new(page_table));
         let proc = Process::new(name, Some(Arc::downgrade(&kproc)), proc_vm, proc_data);
 
+        // 获取新进程的PID
+        let pid = proc.pid();
+
         // alloc stack for the new process base on pid
         let stack_top = proc.alloc_init_stack();
 
-        // FIXME: set the stack frame
+        // 设置栈帧
+        {
+            let mut proc_write = proc.write();
+            proc_write.context_mut().init_stack_frame(entry, stack_top);
+        }
 
-        // FIXME: add to process map
+        // 添加到进程映射表
+        self.add_proc(pid, proc.clone());
 
-        // FIXME: push to ready queue
+        // 将进程添加到就绪队列
+        self.push_ready(pid);
 
-        // FIXME: return new process pid
+        // 返回新进程PID
+        pid
     }
 
     pub fn kill_current(&self, ret: isize) {
@@ -123,9 +133,30 @@ impl ProcessManager {
     }
 
     pub fn handle_page_fault(&self, addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
-        // FIXME: handle page fault
+        // 检查是否为合法的缺页异常
+        // 我们只处理由于页面不存在导致的缺页异常，而非权限问题
+        if !err_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION) {
+            let current = self.current();
+            let mut inner = current.write();
 
-        false
+            trace!(
+                "Handling page fault at {:#x} for process {}",
+                addr.as_u64(),
+                current.pid()
+            );
+
+            // 委托给当前进程处理
+            inner.handle_page_fault(addr)
+        } else {
+            // 越权访问或其他非预期错误情况
+            warn!(
+                "Illegal page fault: {:?} at {:#x} for process #{}",
+                err_code,
+                addr,
+                self.current().pid()
+            );
+            false
+        }
     }
 
     pub fn kill(&self, pid: ProcessId, ret: isize) {

@@ -13,6 +13,7 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
 
 pub extern "C" fn clock(mut context: context::ProcessContext) {
     switch(&mut context);
+    super::ack();
 }
 
 as_handler!(clock);

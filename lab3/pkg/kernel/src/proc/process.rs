@@ -88,7 +88,17 @@ impl Process {
     }
 
     pub fn alloc_init_stack(&self) -> VirtAddr {
-        self.write().vm_mut().init_proc_stack(self.pid)
+        // 分配并初始化进程的栈空间，返回栈顶地址
+        let stack_top = self.write().vm_mut().init_proc_stack(self.pid);
+
+        trace!(
+            "Process {}#{} stack allocated at {:#x}",
+            self.read().name(),
+            self.pid,
+            stack_top.as_u64()
+        );
+
+        stack_top
     }
 }
 
@@ -118,7 +128,7 @@ impl ProcessInner {
     }
 
     pub fn clone_page_table(&self) -> PageTableContext {
-        self.proc_vm.as_ref().unwrap()
+        self.proc_vm.as_ref().unwrap().page_table.clone_level_4()
     }
 
     pub fn is_ready(&self) -> bool {
@@ -132,6 +142,9 @@ impl ProcessInner {
     pub fn vm_mut(&mut self) -> &mut ProcessVm {
         self.proc_vm.as_mut().unwrap()
     }
+    pub fn context_mut(&mut self) -> &mut ProcessContext {
+        &mut self.context
+    }
 
     pub fn handle_page_fault(&mut self, addr: VirtAddr) -> bool {
         self.vm_mut().handle_page_fault(addr)
@@ -140,15 +153,20 @@ impl ProcessInner {
     /// Save the process's context
     /// mark the process as ready
     pub(super) fn save(&mut self, context: &ProcessContext) {
-        // FIXME: save the process's context
+        // 保存进程上下文
+        self.context.save(context);
+        // 将进程标记为就绪状态
+        self.status = ProgramStatus::Ready;
     }
 
     /// Restore the process's context
     /// mark the process as running
     pub(super) fn restore(&mut self, context: &mut ProcessContext) {
-        // FIXME: restore the process's context
+        // 恢复进程上下文
+        self.context.restore(context);
 
-        // FIXME: restore the process's page table
+        // 将进程标记为运行状态
+        self.status = ProgramStatus::Running;
     }
 
     pub fn parent(&self) -> Option<Arc<Process>> {

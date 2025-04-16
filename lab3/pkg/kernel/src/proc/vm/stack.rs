@@ -1,7 +1,7 @@
 use elf;
 use x86_64::{
     VirtAddr,
-    structures::paging::{Page, mapper::MapToError, page::*},
+    structures::paging::{Mapper, Page, Translate, mapper::MapToError, page::*},
 };
 
 use super::{FrameAllocatorRef, MapperRef};
@@ -104,7 +104,45 @@ impl Stack {
     ) -> Result<(), MapToError<Size4KiB>> {
         debug_assert!(self.is_on_stack(addr), "Address is not on stack.");
 
-        // FIXME: grow stack for page fault
+        // 计算需要分配的页
+        let page = Page::containing_address(addr);
+
+        // 检查该页是否已经在页表中
+        if let x86_64::structures::paging::mapper::TranslateResult::Mapped { .. } =
+            mapper.translate(page.start_address())
+        {
+            // 页已经存在，无需分配
+            return Ok(());
+        }
+
+        // 检查栈大小是否超出限制
+        let current_base = self.range.start.start_address().as_u64();
+        let new_base = page.start_address().as_u64();
+        let stack_size = self.range.end.start_address().as_u64() - new_base;
+
+        if stack_size > STACK_MAX_SIZE {
+            error!("Stack overflow: attempted to grow beyond maximum size");
+            return Err(MapToError::FrameAllocationFailed);
+        }
+
+        // 使用elf::map_range分配和映射页面
+        let page_addr = page.start_address().as_u64();
+        let _ = elf::map_range(page_addr, 1, mapper, alloc)?;
+
+        // 更新栈信息
+        // 如果新分配的页位于当前栈范围之外，需要扩展栈范围
+        if new_base < current_base {
+            let pages_added = (current_base - new_base) / page.size();
+            self.range = Page::range(page, self.range.end);
+            self.usage += pages_added as u64;
+
+            trace!(
+                "Stack grown by {} pages, now at {:#x}-{:#x}",
+                pages_added,
+                self.range.start.start_address().as_u64(),
+                self.range.end.start_address().as_u64()
+            );
+        }
 
         Ok(())
     }

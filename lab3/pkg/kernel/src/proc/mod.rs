@@ -65,7 +65,7 @@ pub fn switch(context: &mut ProcessContext) {
             }
         }
         process_manager.switch_next(context);
-        process_manager.print_process_list();
+        // process_manager.print_process_list();
     });
 }
 
