@@ -63,23 +63,36 @@ impl ProcessManager {
     }
 
     pub fn save_current(&self, context: &ProcessContext) {
-        // FIXME: update current process's tick count
-
-        // FIXME: save current process's context
+        let current_pid = processor::get_pid();
+        if let Some(proc) = self.get_proc(&current_pid) {
+            let mut proc = proc.write();
+            proc.tick();
+            proc.save(context);
+        }
     }
 
     pub fn switch_next(&self, context: &mut ProcessContext) -> ProcessId {
+        let next_pid = loop {
+            if let Some(pid) = self.ready_queue.lock().pop_front() {
+                if let Some(proc) = self.get_proc(&pid) {
+                    if proc.read().status() == ProgramStatus::Ready {
+                        break pid;
+                    }
+                }
+            } else {
+                break processor::get_pid();
+            }
+        };
 
-        // FIXME: fetch the next process from ready queue
+        if let Some(proc) = self.get_proc(&next_pid) {
+            let mut proc_write = proc.write();
+            proc_write.resume();
+            proc_write.restore(context);
+        }
 
-        // FIXME: check if the next process is ready,
-        //        continue to fetch if not ready
+        processor::set_pid(next_pid);
 
-        // FIXME: restore next process's context
-
-        // FIXME: update processor's current pid
-
-        // FIXME: return next process's pid
+        next_pid
     }
 
     pub fn spawn_kernel_thread(

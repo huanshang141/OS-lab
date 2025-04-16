@@ -36,7 +36,6 @@ pub fn init() {
 
     // kernel process
     let kproc = {
-        // 创建内核进程
         Process::new(
             String::from("kernel"),
             None,
@@ -51,10 +50,20 @@ pub fn init() {
 
 pub fn switch(context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        // FIXME: switch to the next process
-        //      - save current process's context
-        //      - handle ready queue update
-        //      - restore next process's context
+        let process_manager = get_process_manager();
+        process_manager.save_current(context);
+        let current = process_manager.current();
+        {
+            let mut current = current.write();
+            if current.status() == ProgramStatus::Running {
+                current.pause();
+                let pid = current.pid();
+                drop(current);
+                process_manager.push_ready(pid);
+            }
+        }
+        process_manager.switch_next(context);
+        process_manager.print_process_list();
     });
 }
 
