@@ -142,9 +142,10 @@ impl ProcessInner {
     pub fn vm_mut(&mut self) -> &mut ProcessVm {
         self.proc_vm.as_mut().unwrap()
     }
-    pub fn context_mut(&mut self) -> &mut ProcessContext {
-        &mut self.context
-    }
+
+    // pub fn context_mut(&mut self) -> VolatileRef<ProcessContextValue> {
+    //     self.context.as_mut().as_mut_ptr()
+    // }
 
     pub fn handle_page_fault(&mut self, addr: VirtAddr) -> bool {
         self.vm_mut().handle_page_fault(addr)
@@ -153,10 +154,13 @@ impl ProcessInner {
     /// Save the process's context
     /// mark the process as ready
     pub(super) fn save(&mut self, context: &ProcessContext) {
+        if self.status != ProgramStatus::Running && self.status != ProgramStatus::Ready {
+            return;
+        }
         // 保存进程上下文
         self.context.save(context);
         // 将进程标记为就绪状态
-        self.status = ProgramStatus::Ready;
+        self.pause();
     }
 
     /// Restore the process's context
@@ -164,9 +168,9 @@ impl ProcessInner {
     pub(super) fn restore(&mut self, context: &mut ProcessContext) {
         // 恢复进程上下文
         self.context.restore(context);
-
+        self.proc_vm.as_ref().unwrap().page_table.load();
         // 将进程标记为运行状态
-        self.status = ProgramStatus::Running;
+        self.resume();
     }
 
     pub fn parent(&self) -> Option<Arc<Process>> {
@@ -180,6 +184,9 @@ impl ProcessInner {
 
         self.proc_data = None;
         self.proc_vm = None;
+    }
+    pub fn set_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
+        self.context.init_stack_frame(entry, stack_top);
     }
 }
 

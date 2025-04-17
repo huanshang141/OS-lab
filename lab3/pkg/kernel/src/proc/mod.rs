@@ -58,11 +58,10 @@ pub fn switch(context: &mut ProcessContext) {
         let pid = current.pid();
         {
             let mut current = current.write();
-            if current.status() == ProgramStatus::Running {
-                current.pause();
-                drop(current);
-                process_manager.push_ready(pid);
-            }
+
+            current.pause();
+            drop(current);
+            process_manager.push_ready(pid);
         }
         process_manager.switch_next(context);
         // process_manager.print_process_list();

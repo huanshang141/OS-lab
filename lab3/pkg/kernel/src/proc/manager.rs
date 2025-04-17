@@ -63,12 +63,10 @@ impl ProcessManager {
     }
 
     pub fn save_current(&self, context: &ProcessContext) {
-        let current_pid = processor::get_pid();
-        if let Some(proc) = self.get_proc(&current_pid) {
-            let mut proc = proc.write();
-            proc.tick();
-            proc.save(context);
-        }
+        let proc = self.current();
+        let mut proc_write = proc.write();
+        proc_write.tick();
+        proc_write.save(context);
     }
 
     pub fn switch_next(&self, context: &mut ProcessContext) -> ProcessId {
@@ -111,12 +109,10 @@ impl ProcessManager {
 
         // alloc stack for the new process base on pid
         let stack_top = proc.alloc_init_stack();
-
+        proc.write().pause();
         // 设置栈帧
-        {
-            let mut proc_write = proc.write();
-            proc_write.context_mut().init_stack_frame(entry, stack_top);
-        }
+
+        proc.write().set_stack_frame(entry, stack_top);
 
         // 添加到进程映射表
         self.add_proc(pid, proc.clone());
@@ -197,6 +193,9 @@ impl ProcessManager {
         print!("{}", output);
     }
     pub fn get_exit_code(&self, pid: ProcessId) -> Option<isize> {
-        self.get_proc(&pid).and_then(|proc| proc.read().exit_code())
+        //avoid deadlock
+        x86_64::instructions::interrupts::without_interrupts(|| {
+            self.get_proc(&pid).and_then(|proc| proc.read().exit_code())
+        })
     }
 }
