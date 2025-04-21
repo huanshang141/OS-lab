@@ -64,6 +64,11 @@ pub extern "x86-interrupt" fn page_fault_handler(
             err_code, fault_addr, stack_frame
         );
         // FIXME: print info about which process causes page fault?
+        use crate::proc::manager::get_process_manager;
+        info!(
+            "Page fault is caused by {:#?}",
+            get_process_manager().current()
+        );
         panic!("Cannot handle page fault!");
     }
 }

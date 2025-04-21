@@ -157,19 +157,15 @@ impl ProcessInner {
         if self.status != ProgramStatus::Running && self.status != ProgramStatus::Ready {
             return;
         }
-        // 保存进程上下文
         self.context.save(context);
-        // 将进程标记为就绪状态
         self.pause();
     }
 
     /// Restore the process's context
     /// mark the process as running
     pub(super) fn restore(&mut self, context: &mut ProcessContext) {
-        // 恢复进程上下文
         self.context.restore(context);
         self.proc_vm.as_ref().unwrap().page_table.load();
-        // 将进程标记为运行状态
         self.resume();
     }
 

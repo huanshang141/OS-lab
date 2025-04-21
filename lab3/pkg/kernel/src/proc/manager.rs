@@ -129,7 +129,6 @@ impl ProcessManager {
     }
 
     pub fn handle_page_fault(&self, addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
-        // 检查是否为合法的缺页异常
         if !err_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION) {
             let current = self.current();
             let mut inner = current.write();
@@ -140,10 +139,8 @@ impl ProcessManager {
                 current.pid()
             );
 
-            // 委托给当前进程处理
             inner.handle_page_fault(addr)
         } else {
-            // 越权访问或其他非预期错误情况
             warn!(
                 "Illegal page fault: {:?} at {:#x} for process #{}",
                 err_code,
