@@ -130,7 +130,6 @@ impl ProcessManager {
 
     pub fn handle_page_fault(&self, addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
         // 检查是否为合法的缺页异常
-        // 我们只处理由于页面不存在导致的缺页异常，而非权限问题
         if !err_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION) {
             let current = self.current();
             let mut inner = current.write();
