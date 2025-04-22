@@ -42,8 +42,9 @@ impl ProcessVm {
         // 栈顶位置 = STACK_MAX - (pid-1) * STACK_MAX_SIZE - 8
         use self::stack::{STACK_DEF_PAGE, STACK_MAX, STACK_MAX_SIZE};
 
-        let stack_top = STACK_MAX - ((pid.0 as u64 - 1) * STACK_MAX_SIZE) - 8;
-        let stack_bot = stack_top - STACK_DEF_PAGE * crate::memory::PAGE_SIZE + 1;
+        let stack_top = STACK_INIT_TOP - ((pid.0 as u64 - 1) * STACK_MAX_SIZE);
+        let stack_bot = STACK_INIT_BOT - ((pid.0 as u64 - 1) * STACK_MAX_SIZE);
+        // let stack_bot = stack_top - STACK_DEF_PAGE * crate::memory::PAGE_SIZE + 1;
 
         let stack_top_addr = VirtAddr::new(stack_top);
 

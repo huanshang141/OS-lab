@@ -56,15 +56,11 @@ pub fn switch(context: &mut ProcessContext) {
         process_manager.save_current(context);
         let current = process_manager.current();
         let pid = current.pid();
-        {
-            if current.read().status() != ProgramStatus::Dead {
-                let mut current = current.write();
 
-                current.pause();
-                drop(current);
-                process_manager.push_ready(pid);
-            }
+        if current.read().status() == ProgramStatus::Ready {
+            process_manager.push_ready(pid);
         }
+
         process_manager.switch_next(context);
         // process_manager.print_process_list();
     });
