@@ -1,16 +1,16 @@
 #![no_std]
 
+pub use uefi::Status;
 pub use uefi::boot::{MemoryAttribute, MemoryDescriptor, MemoryType};
 pub use uefi::data_types::chars::*;
 pub use uefi::data_types::*;
 pub use uefi::proto::console::gop::{GraphicsOutput, ModeInfo};
-pub use uefi::Status;
 
 use arrayvec::ArrayVec;
 use core::ptr::NonNull;
+use x86_64::VirtAddr;
 use x86_64::registers::control::Cr3;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
-use x86_64::VirtAddr;
 
 pub mod allocator;
 pub mod config;
@@ -34,6 +34,8 @@ pub struct BootInfo {
 
     /// The system table virtual address
     pub system_table: NonNull<core::ffi::c_void>,
+    // Loaded apps
+    pub loaded_apps: Option<AppList>,
 }
 
 /// Get current page table from CR3
@@ -94,3 +96,17 @@ macro_rules! entry_point {
         }
     };
 }
+use arrayvec::ArrayString;
+use xmas_elf::ElfFile;
+const MAX_APPLIST_LENGTH: usize = 16;
+
+/// App information
+pub struct App<'a> {
+    /// The name of app
+    pub name: ArrayString<16>,
+    /// The ELF file
+    pub elf: ElfFile<'a>,
+}
+
+pub type AppList = ArrayVec<App<'static>, MAX_APPLIST_LENGTH>;
+pub type AppListRef = Option<&'static ArrayVec<App<'static>, MAX_APPLIST_LENGTH>>;

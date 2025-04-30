@@ -8,6 +8,7 @@ mod processor;
 mod vm;
 
 use crate::memory::PAGE_SIZE;
+use alloc::vec::Vec;
 use manager::*;
 use process::*;
 
@@ -31,7 +32,7 @@ pub enum ProgramStatus {
 }
 
 /// init process manager
-pub fn init() {
+pub fn init(boot_info: &'static boot::BootInfo) {
     let proc_vm = ProcessVm::new(PageTableContext::new()).init_kernel_vm();
 
     trace!("Init kernel vm: {:#?}", proc_vm);
@@ -45,7 +46,8 @@ pub fn init() {
             Some(ProcessData::default()),
         )
     };
-    manager::init(kproc);
+    let app_list = boot_info.loaded_apps.as_ref();
+    manager::init(kproc, app_list);
 
     info!("Process Manager Initialized.");
 }
@@ -99,4 +101,24 @@ pub fn handle_page_fault(addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
     x86_64::instructions::interrupts::without_interrupts(|| {
         get_process_manager().handle_page_fault(addr, err_code)
     })
+}
+pub fn list_app() {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let app_list = get_process_manager().app_list();
+        if app_list.is_none() {
+            println!("[!] No app found in list!");
+            return;
+        }
+
+        let apps = app_list
+            .unwrap()
+            .iter()
+            .map(|app| app.name.as_str())
+            .collect::<Vec<&str>>()
+            .join(", ");
+
+        // TODO: print more information like size, entry point, etc.
+
+        println!("[+] App list: {}", apps);
+    });
 }

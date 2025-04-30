@@ -119,7 +119,14 @@ fn efi_main() -> Status {
     // 5. Pass system table to kernel
     let ptr = uefi::table::system_table_raw().expect("Failed to get system table");
     let system_table = ptr.cast::<core::ffi::c_void>();
-
+    //load apps
+    let apps = if config.load_apps {
+        info!("Loading apps...");
+        Some(load_apps())
+    } else {
+        info!("Skip loading apps");
+        None
+    };
     // 6. Exit boot and jump to ELF entry
     info!("Exiting boot services...");
 
@@ -131,6 +138,7 @@ fn efi_main() -> Status {
         memory_map: mmap.entries().copied().collect(),
         physical_memory_offset: config.physical_memory_offset,
         system_table,
+        loaded_apps: apps,
     };
 
     // align stack to 8 bytes

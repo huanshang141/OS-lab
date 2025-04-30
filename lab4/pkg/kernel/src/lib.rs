@@ -32,7 +32,7 @@ pub mod proc;
 pub use alloc::format;
 
 use boot::BootInfo;
-use uefi::{runtime::ResetType, Status};
+use uefi::{Status, runtime::ResetType};
 
 pub fn init(boot_info: &'static BootInfo) {
     unsafe {
@@ -45,7 +45,7 @@ pub fn init(boot_info: &'static BootInfo) {
     memory::address::init(boot_info);
     memory::gdt::init(); // init gdt
     memory::allocator::init(); // init kernel heap allocator
-    proc::init(); // init process manager
+    proc::init(boot_info); // init process manager
     interrupt::init(); // init interrupts
     memory::init(boot_info); // init memory manager
 
