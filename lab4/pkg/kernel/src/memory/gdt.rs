@@ -1,9 +1,9 @@
 use core::ptr::addr_of_mut;
 use lazy_static::lazy_static;
+use x86_64::VirtAddr;
 use x86_64::registers::segmentation::Segment;
 use x86_64::structures::gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector};
 use x86_64::structures::tss::TaskStateSegment;
-use x86_64::VirtAddr;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 pub const PAGE_FAULT_IST_INDEX: u16 = 1;
@@ -74,11 +74,26 @@ lazy_static! {
     };
 }
 
+#[derive(Debug)]
+pub struct KernelSelectors {
+    pub code_selector: SegmentSelector,
+    pub data_selector: SegmentSelector,
+    tss_selector: SegmentSelector,
+}
+
+#[derive(Debug)]
+pub struct UserSelectors {
+    pub code_selector: SegmentSelector,
+    pub data_selector: SegmentSelector,
+}
+
 lazy_static! {
-    static ref GDT: (GlobalDescriptorTable, KernelSelectors) = {
+    static ref GDT: (GlobalDescriptorTable, KernelSelectors, UserSelectors) = {
         let mut gdt = GlobalDescriptorTable::new();
         let code_selector = gdt.append(Descriptor::kernel_code_segment());
         let data_selector = gdt.append(Descriptor::kernel_data_segment());
+        let user_code_selector = gdt.append(Descriptor::user_code_segment());
+        let user_data_selector = gdt.append(Descriptor::user_data_segment());
         let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
         (
             gdt,
@@ -87,21 +102,18 @@ lazy_static! {
                 data_selector,
                 tss_selector,
             },
+            UserSelectors {
+                code_selector: user_code_selector,
+                data_selector: user_data_selector,
+            },
         )
     };
 }
 
-#[derive(Debug)]
-pub struct KernelSelectors {
-    pub code_selector: SegmentSelector,
-    pub data_selector: SegmentSelector,
-    tss_selector: SegmentSelector,
-}
-
 pub fn init() {
+    use x86_64::PrivilegeLevel;
     use x86_64::instructions::segmentation::{CS, DS, ES, FS, GS, SS};
     use x86_64::instructions::tables::load_tss;
-    use x86_64::PrivilegeLevel;
 
     GDT.0.load();
     unsafe {
@@ -128,4 +140,8 @@ pub fn init() {
 
 pub fn get_selector() -> &'static KernelSelectors {
     &GDT.1
+}
+
+pub fn get_user_selector() -> &'static UserSelectors {
+    &GDT.2
 }

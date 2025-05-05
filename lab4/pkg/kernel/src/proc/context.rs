@@ -5,7 +5,10 @@ use x86_64::{
     structures::{gdt::SegmentSelector, idt::InterruptStackFrameValue},
 };
 
-use crate::{RegistersValue, memory::gdt::get_selector};
+use crate::{
+    RegistersValue,
+    memory::gdt::{get_selector, get_user_selector},
+};
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -52,9 +55,19 @@ impl ProcessContext {
         self.value.stack_frame.cpu_flags =
             RFlags::IOPL_HIGH | RFlags::IOPL_LOW | RFlags::INTERRUPT_FLAG;
 
-        let selector = get_selector();
-        self.value.stack_frame.code_segment = selector.code_selector;
-        self.value.stack_frame.stack_segment = selector.data_selector;
+        // 获取内核态选择子
+        let kernel_selector = get_selector();
+        // 使用内核态代码段和数据段选择子
+        self.value.stack_frame.code_segment = kernel_selector.code_selector;
+        self.value.stack_frame.stack_segment = kernel_selector.data_selector;
+        trace!("Init stack frame: {:#?}", &self.stack_frame);
+
+        // 获取用户态选择子
+        let user_selector = get_user_selector();
+
+        // 使用用户态代码段和数据段选择子
+        self.value.stack_frame.code_segment = user_selector.code_selector;
+        self.value.stack_frame.stack_segment = user_selector.data_selector;
 
         trace!("Init stack frame: {:#?}", &self.stack_frame);
     }

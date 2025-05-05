@@ -90,6 +90,7 @@ fn efi_main() -> Status {
         config.physical_memory_offset,
         &mut page_table,
         &mut UEFIFrameAllocator {},
+        false, // kernel mode
     )
     .expect("Failed to load kernel ELF");
     info!("Kernel ELF loaded and mapped");

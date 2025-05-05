@@ -5,6 +5,7 @@ use x86_64::{
 };
 
 use crate::{humanized_size, memory::*};
+use xmas_elf::ElfFile;
 
 pub mod stack;
 
@@ -80,6 +81,31 @@ impl ProcessVm {
         let alloc = &mut *get_frame_alloc_for_sure();
 
         self.stack.handle_page_fault(addr, mapper, alloc)
+    }
+
+    pub fn load_elf(
+        &mut self,
+        elf: &ElfFile,
+        pid: ProcessId,
+    ) -> Result<VirtAddr, MapToError<Size4KiB>> {
+        // 获取页表映射器和帧分配器
+        let mapper = &mut self.page_table.mapper();
+        let frame_allocator = &mut *get_frame_alloc_for_sure();
+
+        // 加载ELF文件到内存，设置为用户可访问
+        elf::load_elf(
+            elf,
+            *PHYSICAL_OFFSET.get().unwrap(),
+            mapper,
+            frame_allocator,
+            true, // 设置USER_ACCESSIBLE标志
+        )?;
+
+        // 初始化进程栈并获取栈顶地址
+        let stack_top = self.init_proc_stack(pid);
+
+        // 返回栈顶地址
+        Ok(stack_top)
     }
 
     pub(super) fn memory_usage(&self) -> u64 {

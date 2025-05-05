@@ -87,6 +87,7 @@ pub fn load_elf(
     physical_offset: u64,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+    user_access: bool,
 ) -> Result<(), MapToError<Size4KiB>> {
     let file_buf = elf.input.as_ptr();
 
@@ -103,6 +104,7 @@ pub fn load_elf(
             &segment,
             page_table,
             frame_allocator,
+            user_access,
         )?
     }
 
@@ -118,6 +120,7 @@ fn load_segment(
     segment: &program::ProgramHeader,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+    user_access: bool,
 ) -> Result<(), MapToError<Size4KiB>> {
     trace!("Loading & mapping segment: {:#x?}", segment);
 
@@ -128,9 +131,7 @@ fn load_segment(
 
     let mut page_table_flags = PageTableFlags::PRESENT;
 
-    // FIXME: handle page table flags with segment flags
-    // llm assist
-    // 使用segment.flags()来设置页表标志
+    // 设置页表标志位
     if segment.flags().is_write() {
         page_table_flags |= PageTableFlags::WRITABLE;
     }
@@ -138,7 +139,10 @@ fn load_segment(
         page_table_flags |= PageTableFlags::NO_EXECUTE;
     }
 
-    // unimplemented!("Handle page table flags with segment flags!");
+    // 根据user_access参数决定是否添加USER_ACCESSIBLE标志位
+    if user_access {
+        page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
+    }
 
     trace!("Segment page table flag: {:?}", page_table_flags);
 

@@ -4,7 +4,11 @@ use crate::memory::{
     allocator::{ALLOCATOR, HEAP_SIZE},
     get_frame_alloc_for_sure,
 };
-use alloc::{collections::*, format, sync::Arc};
+use alloc::{
+    collections::*,
+    format,
+    sync::{Arc, Weak},
+};
 use spin::{Mutex, RwLock};
 
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
@@ -198,5 +202,39 @@ impl ProcessManager {
     }
     pub fn app_list(&self) -> boot::AppListRef {
         self.app_list
+    }
+    pub fn spawn(
+        &self,
+        elf: &ElfFile,
+        name: String,
+        parent: Option<Weak<Process>>,
+        proc_data: Option<ProcessData>,
+    ) -> ProcessId {
+        let kproc = self.get_proc(&KERNEL_PID).unwrap();
+        let page_table = kproc.read().clone_page_table();
+        let page_table_mapper: x86_64::structures::paging::OffsetPageTable<'static> =
+            page_table.mapper();
+        let proc_vm = Some(ProcessVm::new(page_table));
+        let proc = Process::new(name, parent, proc_vm, proc_data);
+
+        let pid = proc.pid();
+
+        let mut inner = proc.write();
+        // 加载 ELF 文件
+        inner.load_elf(elf, page_table_mapper);
+
+        // 将进程标记为就绪状态
+        inner.pause();
+        drop(inner);
+
+        trace!("New {:#?}", &proc);
+
+        // 添加到进程映射表
+        self.add_proc(pid, proc.clone());
+
+        // 将进程添加到就绪队列
+        self.push_ready(pid);
+
+        pid
     }
 }

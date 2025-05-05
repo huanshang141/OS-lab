@@ -181,8 +181,26 @@ impl ProcessInner {
         self.proc_data = None;
         self.proc_vm = None;
     }
+
     pub fn set_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
         self.context.init_stack_frame(entry, stack_top);
+    }
+
+    pub fn load_elf(
+        &mut self,
+        elf: &ElfFile,
+        mut mapper: x86_64::structures::paging::OffsetPageTable<'static>,
+    ) {
+        // 使用ProcessVm的load_elf函数加载ELF文件并初始化栈
+        let stack_top = self
+            .proc_vm
+            .as_mut()
+            .unwrap()
+            .load_elf(elf, ProcessId(self.name.clone().len() as u16))
+            .unwrap();
+
+        // 设置栈帧
+        self.set_stack_frame(VirtAddr::new(elf.header.pt2.entry_point()), stack_top);
     }
 }
 
