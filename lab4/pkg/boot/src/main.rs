@@ -102,6 +102,8 @@ fn efi_main() -> Status {
         config.kernel_stack_size,    // 从配置文件获取栈大小（页数）
         &mut page_table,             // 页表
         &mut UEFIFrameAllocator {},  // 帧分配器
+        false,
+        false,
     )
     .expect("Failed to map kernel stack");
     info!(

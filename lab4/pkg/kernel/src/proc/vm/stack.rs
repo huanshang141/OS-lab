@@ -66,7 +66,8 @@ impl Stack {
     pub fn init(&mut self, mapper: MapperRef, alloc: FrameAllocatorRef) {
         debug_assert!(self.usage == 0, "Stack is not empty.");
 
-        self.range = elf::map_range(STACK_INIT_BOT, STACK_DEF_PAGE, mapper, alloc).unwrap();
+        self.range =
+            elf::map_range(STACK_INIT_BOT, STACK_DEF_PAGE, mapper, alloc, true, false).unwrap();
         self.usage = STACK_DEF_PAGE;
     }
 
@@ -121,7 +122,7 @@ impl Stack {
         }
 
         let page_addr = page.start_address().as_u64();
-        let _ = elf::map_range(page_addr, 1, mapper, alloc)?;
+        let _ = elf::map_range(page_addr, 1, mapper, alloc, true, false)?;
 
         if new_base < current_base {
             let pages_added = (current_base - new_base) / page.size();

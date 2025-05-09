@@ -28,6 +28,8 @@ pub fn init_user_heap() -> Result<(), MapToError<Size4KiB>> {
         USER_HEAP_PAGE as u64,
         mapper,
         frame_allocator,
+        true,
+        true,
     )?;
 
     unsafe {

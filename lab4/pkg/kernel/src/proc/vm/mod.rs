@@ -48,13 +48,19 @@ impl ProcessVm {
         // let stack_bot = stack_top - STACK_DEF_PAGE * crate::memory::PAGE_SIZE + 1;
 
         let stack_top_addr = VirtAddr::new(stack_top);
-
         // 获取页表映射器和帧分配器
         let mapper = &mut self.page_table.mapper();
         let frame_allocator = &mut *get_frame_alloc_for_sure();
 
         // 使用elf::map_range分配和映射栈空间
-        let page_range = match elf::map_range(stack_bot, STACK_DEF_PAGE, mapper, frame_allocator) {
+        let page_range = match elf::map_range(
+            stack_bot,
+            STACK_DEF_PAGE,
+            mapper,
+            frame_allocator,
+            true,
+            false,
+        ) {
             Ok(range) => range,
             Err(e) => {
                 error!("Failed to map stack: {:?}", e);
@@ -87,23 +93,21 @@ impl ProcessVm {
         &mut self,
         elf: &ElfFile,
         mut mapper: x86_64::structures::paging::OffsetPageTable<'static>,
-        alloc: &mut BootInfoFrameAllocator,
         pid: ProcessId,
     ) -> Result<VirtAddr, MapToError<Size4KiB>> {
+        // 初始化进程栈并获取栈顶地址
+        let stack_top = self.init_proc_stack(pid);
         // 获取页表映射器和帧分配器
-        // let frame_allocator = &mut *get_frame_alloc_for_sure();
+        let frame_allocator = &mut *get_frame_alloc_for_sure();
 
         // 加载ELF文件到内存，设置为用户可访问
         elf::load_elf(
             elf,
             *PHYSICAL_OFFSET.get().unwrap(),
             &mut mapper,
-            alloc,
+            frame_allocator,
             true, // 设置USER_ACCESSIBLE标志
         )?;
-
-        // 初始化进程栈并获取栈顶地址
-        let stack_top = self.init_proc_stack(pid);
 
         // 返回栈顶地址
         Ok(stack_top)
