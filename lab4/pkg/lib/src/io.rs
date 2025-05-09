@@ -14,6 +14,7 @@ impl Stdin {
     pub fn read_line(&self) -> String {
         // 分配字符串用于存储结果
         let mut result = String::new();
+
         // 创建一个单字符缓冲区
         let mut buf = [0u8; 1];
 

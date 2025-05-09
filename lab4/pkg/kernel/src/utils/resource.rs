@@ -1,6 +1,8 @@
 use alloc::{collections::btree_map::BTreeMap, string::String};
 use spin::Mutex;
 
+use crate::input::try_pop_key;
+
 #[derive(Debug, Clone)]
 pub enum StdIO {
     Stdin,
@@ -66,8 +68,20 @@ impl Resource {
         match self {
             Resource::Console(stdio) => match stdio {
                 StdIO::Stdin => {
-                    // FIXME: just read from kernel input buffer
-                    Some(0)
+                    use crate::drivers::input;
+                    let mut count = 0;
+
+                    // 从输入缓冲区读取尽可能多的字节到提供的缓冲区
+                    for byte in buf.iter_mut() {
+                        if let Some(key) = input::try_pop_key() {
+                            *byte = key;
+                            count += 1;
+                        } else {
+                            break; // 输入缓冲区已空
+                        }
+                    }
+
+                    Some(count)
                 }
                 _ => None,
             },
