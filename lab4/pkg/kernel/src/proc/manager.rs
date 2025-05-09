@@ -226,10 +226,10 @@ impl ProcessManager {
         // 加载 ELF 文件
         inner.load_elf(elf, page_table_mapper, pid);
         debug!("Load ELF");
-        inner.set_stack_frame(
-            VirtAddr::new_truncate(elf.header.pt2.entry_point()),
-            VirtAddr::new_truncate(STACK_INIT_TOP),
-        );
+        // inner.set_stack_frame(
+        //     VirtAddr::new_truncate(elf.header.pt2.entry_point()),
+        //     VirtAddr::new_truncate(STACK_INIT_TOP),
+        // );
 
         // 将进程标记为就绪状态
         inner.pause();
