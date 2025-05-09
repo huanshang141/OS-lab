@@ -144,3 +144,41 @@ pub fn list_app() {
         println!("[+] App list: {}", apps);
     });
 }
+pub fn read(fd: u8, buf: &mut [u8]) -> isize {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        get_process_manager().current().read().read(fd, buf)
+    })
+}
+pub fn write(fd: u8, buf: &[u8]) -> isize {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        get_process_manager().current().read().write(fd, buf)
+    })
+}
+pub fn exit(ret: isize, context: &mut ProcessContext) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        // FIXME: implement this for ProcessManager
+        manager.kill_current(ret);
+        manager.switch_next(context);
+    })
+}
+pub fn get_current_pid() -> usize {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let pid = get_process_manager().current().pid();
+        pid.0 as usize
+    })
+}
+pub fn wait_pid(arg: u16) -> Option<isize> {
+    let pid = ProcessId(arg);
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        get_process_manager().get_exit_code(pid)
+    })
+}
+#[inline]
+pub fn still_alive(pid: ProcessId) -> bool {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        // check if the process is still alive
+        let pid = get_process_manager().get_exit_code(pid);
+        if let None = pid { true } else { false }
+    })
+}

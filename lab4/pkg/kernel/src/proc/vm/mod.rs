@@ -1,7 +1,7 @@
 use alloc::format;
 use x86_64::{
     VirtAddr,
-    structures::paging::{page::*, *},
+    structures::paging::{mapper::MapToError, page::*, *},
 };
 
 use crate::{humanized_size, memory::*};
@@ -86,18 +86,19 @@ impl ProcessVm {
     pub fn load_elf(
         &mut self,
         elf: &ElfFile,
+        mut mapper: x86_64::structures::paging::OffsetPageTable<'static>,
+        alloc: &mut BootInfoFrameAllocator,
         pid: ProcessId,
     ) -> Result<VirtAddr, MapToError<Size4KiB>> {
         // 获取页表映射器和帧分配器
-        let mapper = &mut self.page_table.mapper();
-        let frame_allocator = &mut *get_frame_alloc_for_sure();
+        // let frame_allocator = &mut *get_frame_alloc_for_sure();
 
         // 加载ELF文件到内存，设置为用户可访问
         elf::load_elf(
             elf,
             *PHYSICAL_OFFSET.get().unwrap(),
-            mapper,
-            frame_allocator,
+            &mut mapper,
+            alloc,
             true, // 设置USER_ACCESSIBLE标志
         )?;
 

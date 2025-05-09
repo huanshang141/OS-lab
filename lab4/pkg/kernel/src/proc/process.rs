@@ -190,14 +190,22 @@ impl ProcessInner {
         &mut self,
         elf: &ElfFile,
         mut mapper: x86_64::structures::paging::OffsetPageTable<'static>,
+        pid: ProcessId,
     ) {
+        let alloc = &mut *get_frame_alloc_for_sure();
         // 使用ProcessVm的load_elf函数加载ELF文件并初始化栈
         let stack_top = self
             .proc_vm
             .as_mut()
             .unwrap()
-            .load_elf(elf, ProcessId(self.name.clone().len() as u16))
+            .load_elf(elf, mapper, alloc, pid)
             .unwrap();
+        debug!(
+            "Process {}#{} ELF loaded at {:#x}",
+            self.name,
+            pid,
+            stack_top.as_u64()
+        );
 
         // 设置栈帧
         self.set_stack_frame(VirtAddr::new(elf.header.pt2.entry_point()), stack_top);

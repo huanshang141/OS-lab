@@ -9,6 +9,7 @@ use apic::*;
 
 use consts::Irq;
 use x86_64::structures::idt::InterruptDescriptorTable;
+pub mod syscall;
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -17,6 +18,7 @@ lazy_static! {
             exceptions::register_idt(&mut idt);
             clock::register_idt(&mut idt);
             serial::register_idt(&mut idt);
+            syscall::register_idt(&mut idt);
         }
         idt
     };

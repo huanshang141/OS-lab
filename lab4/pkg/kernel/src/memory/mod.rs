@@ -1,6 +1,7 @@
 pub mod address;
 pub mod allocator;
 mod frames;
+pub mod user;
 
 pub mod gdt;
 
@@ -36,4 +37,7 @@ pub fn init(boot_info: &'static boot::BootInfo) {
     }
 
     info!("Frame Allocator initialized.");
+
+    user::init();
+    info!("User Heap Allocator initialized.");
 }

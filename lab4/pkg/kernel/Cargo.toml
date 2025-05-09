@@ -21,3 +21,4 @@ libm = { workspace = true }
 linked_list_allocator = { workspace = true }
 volatile = { workspace = true }
 xmas-elf = { workspace = true }
+syscall_def={package="ysos_syscall",workspace=true}

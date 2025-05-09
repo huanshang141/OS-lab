@@ -1,8 +1,11 @@
 use super::*;
-use crate::memory::{
-    self, PAGE_SIZE,
-    allocator::{ALLOCATOR, HEAP_SIZE},
-    get_frame_alloc_for_sure,
+use crate::{
+    memory::{
+        self, PAGE_SIZE,
+        allocator::{ALLOCATOR, HEAP_SIZE},
+        get_frame_alloc_for_sure,
+    },
+    proc::vm::stack::STACK_INIT_TOP,
 };
 use alloc::{
     collections::*,
@@ -99,36 +102,36 @@ impl ProcessManager {
         next_pid
     }
 
-    pub fn spawn_kernel_thread(
-        &self,
-        entry: VirtAddr,
-        name: String,
-        proc_data: Option<ProcessData>,
-    ) -> ProcessId {
-        let kproc = self.get_proc(&KERNEL_PID).unwrap();
-        let page_table = kproc.read().clone_page_table();
-        let proc_vm = Some(ProcessVm::new(page_table));
-        let proc = Process::new(name, Some(Arc::downgrade(&kproc)), proc_vm, proc_data);
+    // pub fn spawn_kernel_thread(
+    //     &self,
+    //     entry: VirtAddr,
+    //     name: String,
+    //     proc_data: Option<ProcessData>,
+    // ) -> ProcessId {
+    //     let kproc = self.get_proc(&KERNEL_PID).unwrap();
+    //     let page_table = kproc.read().clone_page_table();
+    //     let proc_vm = Some(ProcessVm::new(page_table));
+    //     let proc = Process::new(name, Some(Arc::downgrade(&kproc)), proc_vm, proc_data);
 
-        // 获取新进程的PID
-        let pid = proc.pid();
+    //     // 获取新进程的PID
+    //     let pid = proc.pid();
 
-        // alloc stack for the new process base on pid
-        let stack_top = proc.alloc_init_stack();
-        proc.write().pause();
-        // 设置栈帧
+    //     // alloc stack for the new process base on pid
+    //     let stack_top = proc.alloc_init_stack();
+    //     proc.write().pause();
+    //     // 设置栈帧
 
-        proc.write().set_stack_frame(entry, stack_top);
+    //     proc.write().set_stack_frame(entry, stack_top);
 
-        // 添加到进程映射表
-        self.add_proc(pid, proc.clone());
+    //     // 添加到进程映射表
+    //     self.add_proc(pid, proc.clone());
 
-        // 将进程添加到就绪队列
-        self.push_ready(pid);
+    //     // 将进程添加到就绪队列
+    //     self.push_ready(pid);
 
-        // 返回新进程PID
-        pid
-    }
+    //     // 返回新进程PID
+    //     pid
+    // }
 
     pub fn kill_current(&self, ret: isize) {
         self.kill(processor::get_pid(), ret);
@@ -221,7 +224,12 @@ impl ProcessManager {
 
         let mut inner = proc.write();
         // 加载 ELF 文件
-        inner.load_elf(elf, page_table_mapper);
+        inner.load_elf(elf, page_table_mapper, pid);
+        debug!("Load ELF");
+        inner.set_stack_frame(
+            VirtAddr::new_truncate(elf.header.pt2.entry_point()),
+            VirtAddr::new_truncate(STACK_INIT_TOP),
+        );
 
         // 将进程标记为就绪状态
         inner.pause();

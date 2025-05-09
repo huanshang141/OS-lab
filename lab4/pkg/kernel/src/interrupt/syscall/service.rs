@@ -1,42 +1,76 @@
 use core::alloc::Layout;
 
+use crate::proc;
 use crate::proc::*;
 use crate::utils::*;
 
 use super::SyscallArgs;
 
 pub fn spawn_process(args: &SyscallArgs) -> usize {
-    // FIXME: get app name by args
-    //       - core::str::from_utf8_unchecked
-    //       - core::slice::from_raw_parts
-    // FIXME: spawn the process by name
-    // FIXME: handle spawn error, return 0 if failed
-    // FIXME: return pid as usize
+    // 从参数获取应用程序名称
+    let app_name = unsafe {
+        let ptr = args.arg0 as *const u8;
+        let len = args.arg1;
+        let slice = core::slice::from_raw_parts(ptr, len);
+        core::str::from_utf8_unchecked(slice)
+    };
 
-    0
+    // 通过名称创建进程
+    let res = proc::spawn(app_name);
+    match res {
+        Some(pid) => pid.0 as usize,
+        None => 0,
+    }
 }
 
 pub fn sys_write(args: &SyscallArgs) -> usize {
-    // FIXME: get buffer and fd by args
-    //       - core::slice::from_raw_parts
-    // FIXME: call proc::write -> isize
-    // FIXME: return the result as usize
+    // 获取文件描述符和缓冲区
+    let fd = args.arg0 as u8;
+    let buf = unsafe {
+        let ptr = args.arg1 as *const u8;
+        let len = args.arg2;
+        core::slice::from_raw_parts(ptr, len)
+    };
 
-    0
+    proc::write(fd, buf) as usize
 }
 
 pub fn sys_read(args: &SyscallArgs) -> usize {
-    // FIXME: just like sys_write
+    // 获取文件描述符和缓冲区
+    let fd = args.arg0 as u8;
+    let buf = unsafe {
+        let ptr = args.arg1 as *mut u8;
+        let len = args.arg2;
+        core::slice::from_raw_parts_mut(ptr, len)
+    };
 
-    0
+    // 调用读取函数并返回读取的字节数
+    proc::read(fd, buf) as usize
 }
 
-pub fn exit_process(args: &SyscallArgs, context: &mut ProcessContext) {
-    // FIXME: exit process with retcode
+pub fn exit_process(args: &SyscallArgs, _context: &mut ProcessContext) {
+    proc::exit(args.arg0 as isize, _context)
 }
 
 pub fn list_process() {
-    // FIXME: list all processes
+    // 列出所有进程
+    proc::print_process_list();
+}
+
+pub fn sys_get_current_pid() -> usize {
+    // 获取当前进程ID
+    proc::get_current_pid() as usize
+}
+
+pub fn sys_wait_pid(args: &SyscallArgs) -> usize {
+    match proc::wait_pid(args.arg0 as u16) {
+        Some(code) => code as usize,
+        None => 1919810,
+    }
+}
+
+pub fn list_apps() {
+    proc::list_app();
 }
 
 pub fn sys_allocate(args: &SyscallArgs) -> usize {

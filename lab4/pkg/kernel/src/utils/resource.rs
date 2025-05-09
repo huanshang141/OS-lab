@@ -1,4 +1,5 @@
-use alloc::string::String;
+use alloc::{collections::btree_map::BTreeMap, string::String};
+use spin::Mutex;
 
 #[derive(Debug, Clone)]
 pub enum StdIO {
