@@ -48,6 +48,14 @@ impl ProcessContext {
     pub fn restore(&self, context: &mut ProcessContext) {
         context.as_mut().as_mut_ptr().write(self.value);
     }
+    #[inline]
+    pub fn set_rsp(&mut self, value: VirtAddr) {
+        self.value.stack_frame.stack_pointer = value;
+    }
+    #[inline]
+    pub fn offset_rsp(&mut self, offset: u64) {
+        self.value.stack_frame.stack_pointer += offset;
+    }
 
     pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
         self.value.stack_frame.stack_pointer = stack_top;
@@ -55,12 +63,12 @@ impl ProcessContext {
         self.value.stack_frame.cpu_flags =
             RFlags::IOPL_HIGH | RFlags::IOPL_LOW | RFlags::INTERRUPT_FLAG;
 
-        // 获取内核态选择子
-        let kernel_selector = get_selector();
-        // 使用内核态代码段和数据段选择子
-        self.value.stack_frame.code_segment = kernel_selector.code_selector;
-        self.value.stack_frame.stack_segment = kernel_selector.data_selector;
-        trace!("Init stack frame: {:#?}", &self.stack_frame);
+        // // 获取内核态选择子
+        // let kernel_selector = get_selector();
+        // // 使用内核态代码段和数据段选择子
+        // self.value.stack_frame.code_segment = kernel_selector.code_selector;
+        // self.value.stack_frame.stack_segment = kernel_selector.data_selector;
+        // trace!("Init stack frame: {:#?}", &self.stack_frame);
 
         // 获取用户态选择子
         let user_selector = get_user_selector();

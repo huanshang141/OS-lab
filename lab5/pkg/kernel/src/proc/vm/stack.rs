@@ -143,6 +143,78 @@ impl Stack {
     pub fn memory_usage(&self) -> u64 {
         self.usage * crate::memory::PAGE_SIZE
     }
+
+    pub fn stack_top(&self) -> VirtAddr {
+        self.range.end.start_address()
+    }
+    pub fn stack_bot(&self) -> VirtAddr {
+        self.range.start.start_address()
+    }
+
+    pub fn fork(
+        &self,
+        mapper: MapperRef,
+        alloc: FrameAllocatorRef,
+        stack_offset_count: u64,
+    ) -> Self {
+        let stack_offset = stack_offset_count * STACK_MAX_SIZE;
+        let parent_stack_bot = self.range.start.start_address().as_u64();
+        let parent_stack_top = self.range.end.start_address().as_u64();
+        let mut child_stack_bot = parent_stack_bot - stack_offset;
+        let child_stack_range;
+        let child_stack_size = self.usage;
+
+        loop {
+            match elf::map_range(
+                child_stack_bot,
+                child_stack_size,
+                mapper,
+                alloc,
+                true,
+                false,
+            ) {
+                Ok(range) => {
+                    child_stack_range = range;
+                    break;
+                }
+                Err(_) => {
+                    trace!("Map thread stack to {:#x} failed.", child_stack_bot);
+                    child_stack_bot -= STACK_MAX_SIZE; // stack grow down
+                }
+            }
+        }
+        let parent_stack_addr = parent_stack_bot;
+        let child_stack_addr = child_stack_bot;
+        self.clone_range(parent_stack_addr, child_stack_addr, child_stack_size);
+
+        debug!(
+            "Forked stack: child({:#x}-{:#x}), size: {} pages",
+            child_stack_bot,
+            child_stack_range.end.start_address().as_u64(),
+            child_stack_size
+        );
+
+        Self {
+            range: child_stack_range,
+            usage: child_stack_size,
+        }
+    }
+
+    /// Clone a range of memory
+    ///
+    /// - `src_addr`: the address of the source memory
+    /// - `dest_addr`: the address of the target memory
+    /// - `size`: the count of pages to be cloned
+    fn clone_range(&self, cur_addr: u64, dest_addr: u64, size: u64) {
+        trace!("Clone range: {:#x} -> {:#x}", cur_addr, dest_addr);
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                cur_addr as *const u8,
+                dest_addr as *mut u8,
+                (size * Size4KiB::SIZE) as usize,
+            );
+        }
+    }
 }
 
 impl core::fmt::Debug for Stack {

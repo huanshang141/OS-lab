@@ -100,6 +100,28 @@ impl Process {
 
         stack_top
     }
+    pub fn fork(self: &Arc<Self>) -> Arc<Self> {
+        let mut inner = self.inner.write();
+        let child_inner = inner.fork(Arc::downgrade(self));
+        let child_pid = ProcessId::new();
+        debug!(
+            "Forking process {}#{} to {}#{}",
+            inner.name(),
+            self.pid,
+            child_inner.name(),
+            child_pid
+        );
+        let child = Arc::new(Self {
+            pid: child_pid,
+            inner: Arc::new(RwLock::new(child_inner)),
+        });
+
+        inner.children.push(Arc::clone(&child));
+        inner.context.set_rax(child.pid.0 as usize);
+        // child.write().pause();
+        inner.pause();
+        child
+    }
 }
 
 impl ProcessInner {
@@ -209,6 +231,35 @@ impl ProcessInner {
 
         // 设置栈帧
         self.set_stack_frame(VirtAddr::new(elf.header.pt2.entry_point()), stack_top);
+    }
+    pub fn fork(&mut self, parent: Weak<Process>) -> ProcessInner {
+        let stack_offset_count = self.children.len() as u64 + 1;
+        let child_vm = self.proc_vm.as_ref().unwrap().fork(stack_offset_count);
+
+        // 创建子进程的上下文副本
+        let mut child_context: ProcessContext = self.context.clone();
+        let parent_bottom = self.proc_vm.as_ref().unwrap().stack_bot();
+        let child_bottom = child_vm.stack_bot();
+        let offset = child_bottom - parent_bottom;
+        child_context.offset_rsp(offset);
+        // 设置子进程的返回值为0（fork在子进程中返回0）
+        child_context.set_rax(0);
+
+        // 克隆进程数据结构
+        let child_data = self.proc_data.clone();
+
+        // 构造子进程的内部结构
+        ProcessInner {
+            name: self.name.clone(),
+            parent: Some(parent),
+            children: Vec::new(),
+            ticks_passed: 0, // 子进程从0开始计时
+            status: ProgramStatus::Ready,
+            context: child_context,
+            exit_code: None,
+            proc_data: child_data,
+            proc_vm: Some(child_vm),
+        }
     }
 }
 

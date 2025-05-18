@@ -13,6 +13,7 @@ use alloc::{
     sync::{Arc, Weak},
 };
 use spin::{Mutex, RwLock};
+use x86::current;
 
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
 
@@ -244,5 +245,13 @@ impl ProcessManager {
         self.push_ready(pid);
 
         pid
+    }
+    pub fn fork(&self) {
+        let current = self.current();
+        let child = current.fork();
+        self.push_ready(child.pid());
+        self.add_proc(child.pid(), child);
+
+        debug!("Ready queue: {:?}", self.ready_queue.lock());
     }
 }

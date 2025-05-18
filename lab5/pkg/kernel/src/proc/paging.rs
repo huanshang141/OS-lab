@@ -3,9 +3,9 @@ use core::ptr::copy_nonoverlapping;
 
 use alloc::sync::Arc;
 use x86_64::{
+    VirtAddr,
     registers::control::{Cr3, Cr3Flags},
     structures::paging::*,
-    VirtAddr,
 };
 
 pub struct Cr3RegValue {
@@ -68,6 +68,15 @@ impl PageTableContext {
                     .unwrap(),
                 VirtAddr::new_truncate(*PHYSICAL_OFFSET.get().unwrap()),
             )
+        }
+    }
+    pub fn using_count(&self) -> usize {
+        Arc::strong_count(&self.reg)
+    }
+    pub fn fork(&self) -> Self {
+        // forked process shares the page table
+        Self {
+            reg: self.reg.clone(),
         }
     }
 }

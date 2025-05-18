@@ -182,3 +182,13 @@ pub fn still_alive(pid: ProcessId) -> bool {
         if let None = pid { true } else { false }
     })
 }
+pub fn fork(context: &mut ProcessContext) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        manager.save_current(context);
+        manager.fork();
+        let parent = manager.current();
+        manager.push_ready(parent.pid());
+        manager.switch_next(context);
+    })
+}
