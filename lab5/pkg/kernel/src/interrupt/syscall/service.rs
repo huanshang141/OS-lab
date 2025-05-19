@@ -62,11 +62,8 @@ pub fn sys_get_current_pid() -> usize {
     proc::get_current_pid() as usize
 }
 
-pub fn sys_wait_pid(args: &SyscallArgs) -> usize {
-    match proc::wait_pid(args.arg0 as u16) {
-        Some(code) => code as usize,
-        None => 1919810,
-    }
+pub fn sys_wait_pid(args: &SyscallArgs, context: &mut ProcessContext) {
+    proc::wait_pid(ProcessId(args.arg0 as u16), context);
 }
 
 pub fn list_apps() {

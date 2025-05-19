@@ -34,6 +34,7 @@ pub struct ProcessManager {
     processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>,
     ready_queue: Mutex<VecDeque<ProcessId>>,
     app_list: boot::AppListRef,
+    wait_queue: Mutex<BTreeMap<ProcessId, BTreeSet<ProcessId>>>,
 }
 
 impl ProcessManager {
@@ -49,6 +50,7 @@ impl ProcessManager {
             processes: RwLock::new(processes),
             ready_queue: Mutex::new(ready_queue),
             app_list: app_list,
+            wait_queue: Mutex::new(BTreeMap::new()),
         }
     }
 
@@ -179,6 +181,16 @@ impl ProcessManager {
         trace!("Kill {:#?}", &proc);
 
         proc.kill(ret);
+
+        if let Some(pids) = self.wait_queue.lock().remove(&pid) {
+            for waiter_pid in pids {
+                self.wake_up(waiter_pid, Some(ret));
+                trace!(
+                    "Woken up process #{} that was waiting for #{}",
+                    waiter_pid, pid
+                );
+            }
+        }
     }
 
     pub fn print_process_list(&self) {
@@ -253,5 +265,47 @@ impl ProcessManager {
         self.add_proc(child.pid(), child);
 
         debug!("Ready queue: {:?}", self.ready_queue.lock());
+    }
+    pub fn block(&self, pid: ProcessId) {
+        if let Some(proc) = self.get_proc(&pid) {
+            let mut proc_write = proc.write();
+            proc_write.block();
+            trace!("Process #{} blocked", pid);
+        }
+    }
+    pub fn wait_pid(&self, pid: ProcessId) {
+        let current_pid = processor::get_pid();
+
+        if self.get_proc(&pid).is_none() {
+            debug!("Process #{} not found, cannot wait", pid);
+            return;
+        }
+
+        let mut wait_queue = self.wait_queue.lock();
+        wait_queue
+            .entry(pid)
+            .or_insert(BTreeSet::new())
+            .insert(current_pid);
+
+        trace!("Process #{} is waiting for process #{}", current_pid, pid);
+    }
+    /// Wake up the process with the given pid
+    ///
+    /// If `ret` is `Some`, set the return value of the process
+    pub fn wake_up(&self, pid: ProcessId, ret: Option<isize>) {
+        if let Some(proc) = self.get_proc(&pid) {
+            let mut inner = proc.write();
+            if let Some(ret) = ret {
+                inner.set_rax(ret as usize);
+            }
+            // 将进程状态设置为就绪
+            inner.pause();
+            drop(inner);
+
+            // 将进程添加到就绪队列
+            self.push_ready(pid);
+
+            trace!("Process #{} woken up", pid);
+        }
     }
 }

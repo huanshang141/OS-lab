@@ -25,6 +25,9 @@ fn main() -> isize {
             "fork" => {
                 sys_wait_pid(sys_spawn("fork"));
             }
+            "shell" => {
+                sys_wait_pid(sys_spawn("shell"));
+            }
             "help" => {
                 print_help();
             }

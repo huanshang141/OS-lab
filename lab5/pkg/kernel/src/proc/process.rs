@@ -145,6 +145,10 @@ impl ProcessInner {
         self.status = ProgramStatus::Running;
     }
 
+    pub fn block(&mut self) {
+        self.status = ProgramStatus::Blocked;
+    }
+
     pub fn exit_code(&self) -> Option<isize> {
         self.exit_code
     }
@@ -197,6 +201,7 @@ impl ProcessInner {
 
     pub fn kill(&mut self, ret: isize) {
         self.exit_code = Some(ret);
+        // self.context.set_rax(ret as usize);
 
         self.status = ProgramStatus::Dead;
 
@@ -259,6 +264,9 @@ impl ProcessInner {
             proc_data: child_data,
             proc_vm: child_vm,
         }
+    }
+    pub fn set_rax(&mut self, ret: usize) {
+        self.context.set_rax(ret);
     }
 }
 
