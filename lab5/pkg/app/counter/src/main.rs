@@ -5,10 +5,15 @@ use lib::*;
 
 extern crate lib;
 
+use sync::{Semaphore, SpinLock};
+static LOCK: SpinLock = SpinLock::new();
+static SEMA: Semaphore = Semaphore::new(0);
 const THREAD_COUNT: usize = 8;
 static mut COUNTER: isize = 0;
 
 fn main() -> isize {
+    SEMA.init(1);
+
     let mut pids = [0u16; THREAD_COUNT];
 
     for i in 0..THREAD_COUNT {
@@ -32,13 +37,17 @@ fn main() -> isize {
 
     println!("COUNTER result: {}", unsafe { COUNTER });
 
+    SEMA.remove();
     0
 }
 
 fn do_counter_inc() {
     for _ in 0..100 {
-        // FIXME: protect the critical section
+        // LOCK.acquire();
+        SEMA.wait();
         inc_counter();
+        SEMA.signal();
+        // LOCK.release();
     }
 }
 

@@ -1,7 +1,7 @@
 [package]
-name = "ysos_counter"
+name = "dinner"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-lib = { workspace = true }
+lib  =  { workspace = true }

@@ -28,6 +28,15 @@ fn main() -> isize {
             "shell" => {
                 sys_wait_pid(sys_spawn("shell"));
             }
+            "counter" => {
+                sys_wait_pid(sys_spawn("counter"));
+            }
+            "mq" => {
+                sys_wait_pid(sys_spawn("mq"));
+            }
+            "dinner" => {
+                sys_wait_pid(sys_spawn("dinner"));
+            }
             "help" => {
                 print_help();
             }

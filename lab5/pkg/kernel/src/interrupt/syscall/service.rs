@@ -1,5 +1,7 @@
 use core::alloc::Layout;
 
+use uefi::proto::console::pointer;
+
 use crate::proc;
 use crate::proc::*;
 use crate::utils::*;
@@ -104,4 +106,30 @@ pub fn sys_deallocate(args: &SyscallArgs) {
 }
 pub fn sys_fork(context: &mut ProcessContext) {
     proc::fork(context);
+}
+
+pub fn sys_sem(args: &SyscallArgs, context: &mut ProcessContext) {
+    match args.arg0 {
+        0 => context.set_rax(new_sem(args.arg1 as u32, args.arg2)),
+        1 => context.set_rax(remove_sem(args.arg1 as u32)),
+        2 => sem_signal(args.arg1 as u32, context),
+        3 => sem_wait(args.arg1 as u32, context),
+        _ => context.set_rax(usize::MAX),
+    }
+}
+
+pub fn new_sem(key: u32, val: usize) -> usize {
+    proc::new_sem(key, val) as usize
+}
+
+pub fn remove_sem(key: u32) -> usize {
+    proc::remove_sem(key) as usize
+}
+
+pub fn sem_signal(key: u32, context: &mut ProcessContext) {
+    proc::sem_signal(key, context);
+}
+
+pub fn sem_wait(key: u32, context: &mut ProcessContext) {
+    proc::sem_wait(key, context);
 }

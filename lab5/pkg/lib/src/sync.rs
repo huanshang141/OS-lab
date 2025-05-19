@@ -17,11 +17,17 @@ impl SpinLock {
     }
 
     pub fn acquire(&self) {
-        // FIXME: acquire the lock, spin if the lock is not available
+        while self
+            .bolt
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .is_err()
+        {
+            spin_loop();
+        }
     }
 
     pub fn release(&self) {
-        // FIXME: release the lock
+        self.bolt.store(false, Ordering::Release);
     }
 }
 
@@ -29,7 +35,7 @@ unsafe impl Sync for SpinLock {} // Why? Check reflection question 5
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Semaphore {
-    /* FIXME: record the sem key */
+    key: u32,
 }
 
 impl Semaphore {
@@ -42,7 +48,15 @@ impl Semaphore {
         sys_new_sem(self.key, value)
     }
 
-    /* FIXME: other functions with syscall... */
+    pub fn wait(&self) {
+        sys_sem_wait(self.key);
+    }
+    pub fn signal(&self) {
+        sys_sem_signal(self.key);
+    }
+    pub fn remove(&self) -> bool {
+        sys_sem_remove(self.key) == 1
+    }
 }
 
 unsafe impl Sync for Semaphore {}

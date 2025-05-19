@@ -1,5 +1,6 @@
 use crate::{memory::gdt, proc::*};
 use alloc::format;
+use x86::bits64::syscall;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 // NOTE: import `ysos_syscall` package as `syscall_def` in Cargo.toml
@@ -74,6 +75,9 @@ pub fn dispatcher(context: &mut ProcessContext) {
         Syscall::Fork => {
             /* FIXME: fork process */
             sys_fork(context)
+        }
+        Syscall::Sem => {
+            sys_sem(&args, context);
         }
 
         // ----------------------------------------------------

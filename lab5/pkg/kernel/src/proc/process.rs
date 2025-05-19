@@ -268,6 +268,18 @@ impl ProcessInner {
     pub fn set_rax(&mut self, ret: usize) {
         self.context.set_rax(ret);
     }
+    pub fn new_sem(&self, key: u32, val: usize) -> bool {
+        self.proc_data.as_ref().unwrap().new_sem(key, val)
+    }
+    pub fn remove_sem(&self, key: u32) -> bool {
+        self.proc_data.as_ref().unwrap().remove_sem(key)
+    }
+    pub fn sem_signal(&self, key: u32) -> SemaphoreResult {
+        self.proc_data.as_ref().unwrap().sem_signal(key)
+    }
+    pub fn sem_wait(&self, key: u32, pid: ProcessId) -> SemaphoreResult {
+        self.proc_data.as_ref().unwrap().sem_wait(key, pid)
+    }
 }
 
 impl core::ops::Deref for Process {

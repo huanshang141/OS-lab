@@ -5,6 +5,7 @@ mod paging;
 mod pid;
 mod process;
 mod processor;
+mod sync;
 mod vm;
 
 use crate::memory::PAGE_SIZE;
@@ -23,6 +24,8 @@ use vm::ProcessVm;
 use x86_64::VirtAddr;
 use x86_64::structures::idt::PageFaultErrorCode;
 pub const KERNEL_PID: ProcessId = ProcessId(1);
+
+use sync::SemaphoreResult;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ProgramStatus {
@@ -197,5 +200,58 @@ pub fn fork(context: &mut ProcessContext) {
         let parent = manager.current();
         manager.push_ready(parent.pid());
         manager.switch_next(context);
+    })
+}
+pub fn new_sem(key: u32, val: usize) -> bool {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        manager.current().write().new_sem(key, val)
+    })
+}
+
+pub fn remove_sem(key: u32) -> bool {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        manager.current().write().remove_sem(key)
+    })
+}
+pub fn sem_signal(key: u32, context: &mut ProcessContext) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        let pid = manager.current().pid();
+        let ret = manager.current().write().sem_signal(key);
+        match ret {
+            SemaphoreResult::Ok => {
+                context.set_rax(0);
+            }
+            SemaphoreResult::NotExist => {
+                context.set_rax(1);
+            }
+            SemaphoreResult::WakeUp(pid) => {
+                manager.wake_up(pid, None);
+            }
+            _ => unreachable!(),
+        }
+    })
+}
+pub fn sem_wait(key: u32, context: &mut ProcessContext) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        let pid = manager.current().pid();
+        let ret = manager.current().write().sem_wait(key, pid);
+        match ret {
+            SemaphoreResult::Ok => {
+                context.set_rax(0);
+            }
+            SemaphoreResult::NotExist => {
+                context.set_rax(1);
+            }
+            SemaphoreResult::Block(pid) => {
+                manager.save_current(context);
+                manager.block(pid);
+                manager.switch_next(context);
+            }
+            _ => unreachable!(),
+        }
     })
 }
