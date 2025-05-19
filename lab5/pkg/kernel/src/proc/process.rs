@@ -235,14 +235,13 @@ impl ProcessInner {
     pub fn fork(&mut self, parent: Weak<Process>) -> ProcessInner {
         let stack_offset_count = self.children.len() as u64 + 1;
         let child_vm = self.proc_vm.as_ref().unwrap().fork(stack_offset_count);
-
-        // 创建子进程的上下文副本
         let mut child_context: ProcessContext = self.context.clone();
         let parent_bottom = self.proc_vm.as_ref().unwrap().stack_bot();
-        let child_bottom = child_vm.stack_bot();
+        let child_vm = Some(child_vm);
+        let child_bottom = child_vm.as_ref().unwrap().stack_bot();
         let offset = child_bottom - parent_bottom;
+
         child_context.offset_rsp(offset);
-        // 设置子进程的返回值为0（fork在子进程中返回0）
         child_context.set_rax(0);
 
         // 克隆进程数据结构
@@ -258,7 +257,7 @@ impl ProcessInner {
             context: child_context,
             exit_code: None,
             proc_data: child_data,
-            proc_vm: Some(child_vm),
+            proc_vm: child_vm,
         }
     }
 }

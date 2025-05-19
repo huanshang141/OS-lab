@@ -22,6 +22,9 @@ fn main() -> isize {
             "clear" => {
                 print!("\x1b[2J\x1b[1;1H");
             }
+            "fork" => {
+                sys_wait_pid(sys_spawn("fork"));
+            }
             "help" => {
                 print_help();
             }
@@ -42,6 +45,7 @@ fn print_help() {
         hello           - 运行 hello world 应用程序\n\
         fac             - 运行阶乘计算应用程序\n\
         clear           - 清除屏幕\n\
+        fork            - 运行 fork 测试应用程序\n\
         help            - 显示此帮助信息"
     );
 }

@@ -71,6 +71,10 @@ pub fn dispatcher(context: &mut ProcessContext) {
             list_apps();
             context.set_rax(0)
         }
+        Syscall::Fork => {
+            /* FIXME: fork process */
+            sys_fork(context)
+        }
 
         // ----------------------------------------------------
         // NOTE: following syscall examples are implemented

@@ -128,7 +128,8 @@ impl ProcessVm {
             stack: self.stack.fork(mapper, alloc, stack_offset_count),
         }
     }
-    pub fn stack_bot(&self) -> VirtAddr {
+
+    pub fn stack_bot(&self) -> u64 {
         self.stack.stack_bot()
     }
 }

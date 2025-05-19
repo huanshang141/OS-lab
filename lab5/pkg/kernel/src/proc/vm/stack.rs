@@ -144,11 +144,11 @@ impl Stack {
         self.usage * crate::memory::PAGE_SIZE
     }
 
-    pub fn stack_top(&self) -> VirtAddr {
-        self.range.end.start_address()
+    pub fn stack_top(&self) -> u64 {
+        self.range.end.start_address().as_u64()
     }
-    pub fn stack_bot(&self) -> VirtAddr {
-        self.range.start.start_address()
+    pub fn stack_bot(&self) -> u64 {
+        self.range.start.start_address().as_u64()
     }
 
     pub fn fork(

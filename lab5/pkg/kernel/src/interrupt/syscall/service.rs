@@ -105,3 +105,6 @@ pub fn sys_deallocate(args: &SyscallArgs) {
             .deallocate(core::ptr::NonNull::new_unchecked(ptr), *layout);
     }
 }
+pub fn sys_fork(context: &mut ProcessContext) {
+    proc::fork(context);
+}

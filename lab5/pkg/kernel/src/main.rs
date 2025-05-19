@@ -12,7 +12,6 @@ boot::entry_point!(kernel_main);
 pub fn kernel_main(boot_info: &'static boot::BootInfo) -> ! {
     ysos::init(boot_info);
     wait(spawn_init());
-    trace!("000");
     ysos::shutdown();
 }
 
