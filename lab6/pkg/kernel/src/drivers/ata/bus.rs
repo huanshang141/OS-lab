@@ -140,7 +140,14 @@ impl AtaBus {
             // FIXME: store the LBA28 address into four 8-bit registers
             //      - read the documentation for more information
             //      - enable LBA28 mode by setting the drive register
+            self.lba_low.write(bytes[0]); // bits 0-7
+            self.lba_mid.write(bytes[1]); // bits 8-15
+            self.lba_high.write(bytes[2]); // bits 16-23
+            // drive register: bits 24-27 of LBA + drive selection + LBA mode
+            self.drive.write(0xE0 | (drive << 4) | (bytes[3] & 0x0F));
+
             // FIXME: write the command register (cmd as u8)
+            self.command.write(cmd as u8);
         }
 
         if self.status().is_empty() {
@@ -149,6 +156,7 @@ impl AtaBus {
         }
 
         // FIXME: poll for the status to be not BUSY
+        self.poll(AtaStatus::BUSY, false);
 
         if self.is_error() {
             warn!("ATA error: {:?} command error", cmd);
@@ -157,6 +165,8 @@ impl AtaBus {
         }
 
         // FIXME: poll for the status to be not BUSY and DATA_REQUEST_READY
+        self.poll(AtaStatus::BUSY, false);
+        self.poll(AtaStatus::DATA_REQUEST_READY, true);
 
         Ok(())
     }
@@ -171,8 +181,16 @@ impl AtaBus {
         //      - call `write_command` with `drive` and `0` as the block number
         //      - if the status is empty, return `AtaDeviceType::None`
         //      - else return `DeviceError::Unknown` as `FsError`
+        if let Err(_) = self.write_command(drive, 0, AtaCommand::IdentifyDevice) {
+            if self.status().is_empty() {
+                return Ok(AtaDeviceType::None);
+            } else {
+                return Err(storage::DeviceError::UnknownDevice.into());
+            }
+        }
 
         // FIXME: poll for the status to be not BUSY
+        self.poll(AtaStatus::BUSY, false);
 
         Ok(match (self.cylinder_low(), self.cylinder_high()) {
             // we only support PATA drives
@@ -189,18 +207,20 @@ impl AtaBus {
     ///
     /// reference: https://wiki.osdev.org/ATA_PIO_Mode#28_bit_PIO
     /// reference: https://wiki.osdev.org/IDE#Read.2FWrite_From_ATA_Drive
-    pub(super) fn read_pio(
-        &mut self,
-        drive: u8,
-        block: u32,
-        buf: &mut [u8],
-    ) -> storage::FsResult {
+    pub(super) fn read_pio(&mut self, drive: u8, block: u32, buf: &mut [u8]) -> storage::FsResult {
         self.write_command(drive, block, AtaCommand::ReadPio)?;
 
         // FIXME: read the data from the data port into the buffer
         //      - use `buf.chunks_mut(2)`
         //      - use `self.read_data()`
         //      - ! pay attention to data endianness
+        for chunk in buf.chunks_mut(2) {
+            let data = self.read_data().to_le_bytes();
+            chunk[0] = data[0];
+            if chunk.len() > 1 {
+                chunk[1] = data[1];
+            }
+        }
 
         if self.is_error() {
             debug!("ATA error: data read error");
@@ -222,6 +242,14 @@ impl AtaBus {
         //      - use `buf.chunks(2)`
         //      - use `self.write_data()`
         //      - ! pay attention to data endianness
+        for chunk in buf.chunks(2) {
+            let data = if chunk.len() == 2 {
+                u16::from_le_bytes([chunk[0], chunk[1]])
+            } else {
+                u16::from_le_bytes([chunk[0], 0])
+            };
+            self.write_data(data);
+        }
 
         if self.is_error() {
             debug!("ATA error: data write error");

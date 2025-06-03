@@ -65,7 +65,7 @@ where
     B: BlockTrait,
 {
     fn block_count(&self) -> FsResult<usize> {
-        self.inner.block_count()
+        Ok(self.size)
     }
 
     fn read_block(&self, offset: usize, block: &mut B) -> FsResult {
@@ -74,7 +74,10 @@ where
         }
 
         // FIXME: calculate the block offset for inner device
+        let actual_offset = self.offset + offset;
+
         // FIXME: read from the inner device
+        self.inner.read_block(actual_offset, block)
     }
 
     fn write_block(&self, offset: usize, block: &B) -> FsResult {
@@ -83,6 +86,9 @@ where
         }
 
         // FIXME: calculate the block offset for inner device
+        let actual_offset = self.offset + offset;
+
         // FIXME: write to the inner device
+        self.inner.write_block(actual_offset, block)
     }
 }
